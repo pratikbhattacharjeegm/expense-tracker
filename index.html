@@ -226,7 +226,7 @@ input[type="date"]{color-scheme:dark}
 
 
   <button class="import-btn" onclick="navigate('import')">
-    <i class="fa-solid fa-file-import"></i> Import New Statements
+    <i class="fa-solid fa-file-import"></i> Upload &amp; Modify Transactions
   </button>
 
 </div>
@@ -328,7 +328,7 @@ input[type="date"]{color-scheme:dark}
   <div id="importGate">
     <div class="pw-overlay">
       <i class="fa-solid fa-lock"></i>
-      <h2>Manage Expenses</h2>
+      <h2>Upload &amp; Modify Transactions</h2>
       <p>Enter password to unlock</p>
       <input type="password" class="pw-input" id="pwInp" placeholder="Password" onkeydown="if(event.key==='Enter')chkPw()">
       <button class="pw-submit" onclick="chkPw()">Unlock</button>
@@ -338,8 +338,8 @@ input[type="date"]{color-scheme:dark}
 
   <!-- Unlocked Content (hidden until password entered) -->
   <div id="importUnlocked" style="display:none">
-    <div class="page-header">Manage Expenses</div>
-    <div class="page-subheader">Add, review, import, and export transactions</div>
+    <div class="page-header">Upload &amp; Modify Transactions</div>
+    <div class="page-subheader">Add, delete, import, and export your expense data</div>
 
     <!-- 1. Add Expense Form -->
     <div class="section-title">Add Expense</div>
