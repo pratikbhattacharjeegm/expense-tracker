@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Personal Expense Tracker Dashboard">
+  <meta name="theme-color" content="#0f1117">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
+  <title>Expense Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/highcharts@12.1.2/highcharts.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highcharts@12.1.2/modules/sankey.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highcharts@12.1.2/modules/accessibility.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+  <style>
+:root{--bg:#0f1117;--bg-card:#1a1d27;--bg-card-hover:#22253a;--text:#e8eaed;--text-sec:#9aa0b0;--text-mut:#6b7280;--border:#2a2d3a;--border-lt:#22253a;--pri:#6366f1;--pri-lt:rgba(99,102,241,.15);--suc:#22c55e;--suc-lt:rgba(34,197,94,.15);--err:#ef4444;--err-lt:rgba(239,68,68,.15);--warn:#f59e0b;--warn-lt:rgba(245,158,11,.15);--r:12px;--rs:8px;--font:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Roboto,sans-serif;--mono:'SF Mono','Cascadia Code',Consolas,monospace}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--font);line-height:1.5;min-height:100vh;overflow-x:hidden}
+
+/* Pages */
+.page{display:none;padding:20px;max-width:900px;margin:0 auto;padding-bottom:80px}
+.page.active{display:block}
+
+/* Back button */
+.back-btn{display:inline-flex;align-items:center;gap:6px;color:var(--text-sec);font-size:13px;cursor:pointer;padding:6px 0;margin-bottom:16px;border:none;background:none;font-family:var(--font)}
+.back-btn:hover{color:var(--text)}
+
+/* Section titles */
+.section-title{font-size:13px;font-weight:600;color:var(--text-mut);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px}
+
+/* Essential / Non-essential pills */
+.split-bar{display:flex;gap:10px;margin-bottom:20px}
+.split-card{flex:1;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);padding:16px;cursor:pointer;transition:all .15s}
+.split-card:hover{border-color:var(--pri);transform:translateY(-2px)}
+.split-card .label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-mut);margin-bottom:4px}
+.split-card .value{font-size:24px;font-weight:700;font-family:var(--mono);letter-spacing:-.02em}
+.split-card .sub{font-size:11px;color:var(--text-mut);margin-top:2px}
+.split-card.essential .value{color:var(--suc)}
+.split-card.non-essential .value{color:var(--warn)}
+
+/* Chart card */
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:16px}
+.card h3{font-size:14px;font-weight:600;margin-bottom:4px}
+.card .sub{font-size:11px;color:var(--text-mut);margin-bottom:12px}
+.card-clickable{cursor:pointer;transition:border-color .15s}
+.card-clickable:hover{border-color:var(--pri)}
+
+/* Toggle bar */
+.toggle-bar{display:flex;gap:4px;background:var(--bg-card);border-radius:var(--rs);padding:3px;border:1px solid var(--border);width:fit-content;margin-bottom:16px}
+.toggle-btn{padding:6px 14px;border-radius:6px;border:none;background:transparent;color:var(--text-mut);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;font-family:var(--font)}
+.toggle-btn:hover{color:var(--text)}
+.toggle-btn.active{background:var(--pri);color:white}
+
+/* Budget category cards */
+.budget-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.budget-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);padding:14px;cursor:pointer;transition:all .15s}
+.budget-card:hover{border-color:var(--pri);transform:translateY(-1px)}
+.budget-card .cat-name{font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px}
+.budget-card .cat-spent{font-size:18px;font-weight:700;font-family:var(--mono);color:var(--text)}
+.budget-card .cat-target{font-size:11px;color:var(--text-mut);margin-top:4px}
+.budget-card .progress-bar{height:4px;background:var(--border);border-radius:4px;margin-top:8px;overflow:hidden}
+.budget-card .progress-fill{height:100%;border-radius:4px;transition:width .3s}
+.progress-fill.ok{background:var(--suc)}
+.progress-fill.warn{background:var(--warn)}
+.progress-fill.over{background:var(--err)}
+
+/* Transaction list */
+.txn-list{list-style:none}
+.txn-item{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border-lt)}
+.txn-item:last-child{border-bottom:none}
+.txn-left{flex:1}
+.txn-desc{font-size:13px;font-weight:500;color:var(--text)}
+.txn-date{font-size:11px;color:var(--text-mut)}
+.txn-method{font-size:10px;color:var(--text-sec);background:var(--border-lt);padding:1px 6px;border-radius:8px;margin-left:6px}
+.txn-amount{font-size:14px;font-weight:700;font-family:var(--mono);color:var(--text)}
+
+/* Target input */
+.target-row{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);margin-bottom:16px}
+.target-row label{font-size:12px;color:var(--text-sec);white-space:nowrap}
+.target-input{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);padding:8px 12px;color:var(--text);font-size:14px;font-family:var(--mono);outline:none}
+.target-input:focus{border-color:var(--pri)}
+.target-save{background:var(--pri);color:white;border:none;padding:8px 16px;border-radius:var(--rs);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font)}
+.target-save:hover{opacity:.9}
+
+/* Page header */
+.page-header{font-size:20px;font-weight:700;margin-bottom:4px;letter-spacing:-.02em}
+.page-subheader{font-size:12px;color:var(--text-mut);margin-bottom:20px}
+
+/* Month bar in chart - make columns clickable */
+.highcharts-point{cursor:pointer}
+
+/* Badge */
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:500}
+.badge-ess{background:var(--suc-lt);color:var(--suc)}
+.badge-non{background:var(--warn-lt);color:var(--warn)}
+
+@media(max-width:600px){
+  .split-bar{flex-direction:row}
+  .split-card .value{font-size:20px}
+  .budget-grid{grid-template-columns:1fr 1fr}
+  .page{padding:16px;padding-bottom:80px}
+}
+  
+
+/* Quick category cards */
+.cat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
+.cat-qcard{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);padding:14px;cursor:pointer;transition:all .15s}
+.cat-qcard:hover{border-color:var(--pri);transform:translateY(-2px)}
+.cat-qcard .cq-icon{font-size:18px;margin-bottom:6px}
+.cat-qcard .cq-name{font-size:12px;color:var(--text-sec);margin-bottom:2px}
+.cat-qcard .cq-val{font-size:18px;font-weight:700;font-family:var(--mono)}
+.cat-qcard .cq-sub{font-size:11px;color:var(--text-mut);margin-top:4px}
+
+/* Multi-select category filter */
+.ms-wrap{position:relative;display:inline-block}
+.ms-btn{display:flex;align-items:center;gap:4px;padding:6px 10px;font-size:12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);color:var(--text-sec);cursor:pointer;font-family:var(--font);white-space:nowrap;min-width:120px;justify-content:space-between}
+.ms-btn:hover{border-color:var(--pri)}
+.ms-btn .ms-n{background:var(--pri);color:white;font-size:10px;padding:1px 6px;border-radius:10px}
+.ms-dd{display:none;position:absolute;right:0;top:100%;margin-top:4px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--rs);min-width:200px;max-height:280px;overflow-y:auto;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.ms-dd.open{display:block}
+.ms-dd label{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:12px;color:var(--text-sec);cursor:pointer;transition:background .1s}
+.ms-dd label:hover{background:var(--bg-card-hover)}
+.ms-dd label.hd{border-bottom:1px solid var(--border);color:var(--text);font-weight:600}
+.ms-dd input[type="checkbox"]{accent-color:var(--pri);width:14px;height:14px;cursor:pointer}
+/* Date range */
+input[type="date"]{color-scheme:dark}
+
+/* ===== IMPORT MODULE ===== */
+.import-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:var(--bg-card);border:2px dashed var(--border);border-radius:var(--r);color:var(--text-sec);font-size:14px;font-weight:500;cursor:pointer;transition:all .15s;margin-top:20px;font-family:var(--font)}
+.import-btn:hover{border-color:var(--pri);color:var(--pri);background:var(--pri-lt)}
+.pw-overlay{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:16px}
+.pw-overlay i{font-size:48px;color:var(--pri);margin-bottom:8px}
+.pw-overlay h2{font-size:20px;font-weight:700}
+.pw-overlay p{color:var(--text-mut);font-size:13px}
+.pw-input{background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);padding:12px 16px;color:var(--text);font-size:16px;font-family:var(--mono);width:260px;text-align:center;outline:none}
+.pw-input:focus{border-color:var(--pri)}
+.pw-input.pw-err{border-color:var(--err);animation:shake .3s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.pw-submit{background:var(--pri);color:white;border:none;padding:10px 28px;border-radius:var(--rs);font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font)}
+.pw-submit:hover{opacity:.9}
+.pw-error-msg{color:var(--err);font-size:12px;height:16px}
+.upload-zone{border:2px dashed var(--border);border-radius:var(--r);padding:40px 20px;text-align:center;cursor:pointer;transition:all .15s;margin-bottom:16px}
+.upload-zone:hover,.upload-zone.dragover{border-color:var(--pri);background:var(--pri-lt)}
+.upload-zone i{font-size:36px;color:var(--text-mut);margin-bottom:8px}
+.upload-zone p{color:var(--text-sec);font-size:13px}
+.upload-zone .fmts{color:var(--text-mut);font-size:11px;margin-top:4px}
+.upload-zone input{display:none}
+.parse-status{padding:12px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--rs);margin-bottom:16px;font-size:13px;color:var(--text-sec)}
+.parse-status .cnt{color:var(--suc);font-weight:600}
+.fc{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);padding:24px;margin-bottom:16px;transition:all .3s}
+.fc.ok{border-color:var(--suc);background:rgba(34,197,94,.05)}
+.fc.no{border-color:var(--err);opacity:.5}
+.fc-ctr{font-size:12px;color:var(--text-mut);margin-bottom:12px}
+.fc-amt{font-size:32px;font-weight:700;font-family:var(--mono);margin-bottom:4px}
+.fc-dsc{font-size:16px;font-weight:600;margin-bottom:4px}
+.fc-raw{font-size:11px;color:var(--text-mut);margin-bottom:4px;word-break:break-all}
+.fc-dt{font-size:13px;color:var(--text-sec);margin-bottom:16px}
+.fc-fld{margin-bottom:12px}
+.fc-fld label{font-size:11px;color:var(--text-mut);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px}
+.fc-sel{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);padding:10px 12px;color:var(--text);font-size:14px;font-family:var(--font);outline:none;appearance:none;-webkit-appearance:none}
+.fc-sel:focus{border-color:var(--pri)}
+.fc-inp{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);padding:10px 12px;color:var(--text);font-size:14px;font-family:var(--font);outline:none}
+.fc-inp:focus{border-color:var(--pri)}
+.fc-acts{display:flex;gap:10px;margin-top:16px}
+.fc-b{flex:1;padding:12px;border:none;border-radius:var(--rs);font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all .15s}
+.fc-b.g{background:var(--suc);color:white}
+.fc-b.g:hover{opacity:.9}
+.fc-b.r{background:var(--border);color:var(--text-sec)}
+.fc-b.r:hover{background:var(--err-lt);color:var(--err)}
+.fc-sum{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);padding:24px;text-align:center}
+.fc-sum h3{font-size:18px;margin-bottom:8px}
+.fc-sum .st{font-size:13px;color:var(--text-sec);margin-bottom:4px}
+.fc-sum .st b{color:var(--text)}
+.fc-lock{background:var(--suc);color:white;border:none;padding:14px 32px;border-radius:var(--rs);font-size:16px;font-weight:700;cursor:pointer;margin-top:16px;font-family:var(--font)}
+.fc-lock:hover{opacity:.9}
+
+  </style>
+</head>
+<body>
+
+<!-- ==================== PAGE: HOME ==================== -->
+<div id="page-home" class="page active">
+  <div style="margin-bottom:20px">
+    <div class="page-header" style="background:linear-gradient(135deg,#6366f1,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:24px"><i class="fa-solid fa-chart-line" style="-webkit-text-fill-color:#6366f1;margin-right:6px"></i>Expense Tracker</div>
+    <div class="page-subheader" id="homeSubtitle"></div>
+  </div>
+
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <div class="section-title" style="margin-bottom:0">Spending Overview</div>
+    <select id="homeMonth" class="fc-sel" style="width:auto;padding:6px 10px;font-size:12px;background:var(--bg-card);border-color:var(--border)" onchange="renderHome()">
+    </select>
+  </div>
+  <div class="split-bar">
+    <div class="split-card essential" onclick="navigate('breakdown','essential')">
+      <div class="label"><i class="fa-solid fa-shield-halved" style="margin-right:4px"></i>Essential</div>
+      <div class="value" id="essTotal">$0</div>
+      <div class="sub" id="essSub"></div>
+      <div class="sub" id="essAvg" style="margin-top:4px;font-size:11px;color:var(--text-mut)"></div>
+    </div>
+    <div class="split-card non-essential" onclick="navigate('breakdown','non-essential')">
+      <div class="label"><i class="fa-solid fa-sparkles" style="margin-right:4px"></i>Non-Essential</div>
+      <div class="value" id="nonEssTotal">$0</div>
+      <div class="sub" id="nonEssSub"></div>
+      <div class="sub" id="nonEssAvg" style="margin-top:4px;font-size:11px;color:var(--text-mut)"></div>
+    </div>
+  </div>
+
+
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <div class="section-title" style="margin-bottom:0">Quick Categories</div>
+    <div id="qcPicker"></div>
+  </div>
+  <div class="cat-grid" id="qcGrid"></div>
+
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <div class="section-title" style="margin-bottom:0">Monthly Spending</div>
+    <select id="homeChartRange" class="fc-sel" style="width:auto;padding:6px 10px;font-size:12px;background:var(--bg-card);border-color:var(--border)" onchange="renderHome()">
+    </select>
+  </div>
+  <div class="card">
+    <div class="sub">Tap a month for detailed breakdown</div>
+    <div id="chartMonthlyHome" style="height:260px"></div>
+  </div>
+
+
+  <button class="import-btn" onclick="navigate('import')">
+    <i class="fa-solid fa-file-import"></i> Import New Statements
+  </button>
+
+</div>
+
+<!-- ==================== PAGE: BREAKDOWN (Essential / Non-Essential) ==================== -->
+<div id="page-breakdown" class="page">
+  <button class="back-btn" onclick="navigate('home')"><i class="fa-solid fa-arrow-left"></i> Home</button>
+  <div class="page-header" id="breakdownTitle"></div>
+  <div class="page-subheader" id="breakdownSub"></div>
+
+  <!-- Date Range Selector -->
+  <div class="card" style="padding:12px 16px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <label style="font-size:12px;color:var(--text-mut);text-transform:uppercase;letter-spacing:.05em">Range:</label>
+      <select id="bdRange" class="fc-sel" style="width:auto;flex:0 0 auto;padding:8px 12px;font-size:13px" onchange="onBdRangeChange()">
+      </select>
+      <div id="bdCustomDates" style="display:none;flex:1;display:flex;gap:6px;align-items:center">
+        <input type="date" id="bdFrom" class="fc-inp" style="width:auto;padding:8px;font-size:12px" value="">
+        <span style="color:var(--text-mut);font-size:12px">to</span>
+        <input type="date" id="bdTo" class="fc-inp" style="width:auto;padding:8px;font-size:12px" value="">
+        <button class="pw-submit" style="padding:6px 14px;font-size:12px" onclick="renderBreakdown()">Go</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toggle-bar" id="breakdownTimeToggle">
+    <button class="toggle-btn active" onclick="setBreakdownTime('month',this)">By Month</button>
+    <button class="toggle-btn" onclick="setBreakdownTime('week',this)">By Week</button>
+  </div>
+
+  <div class="card">
+    <div id="chartBreakdown" style="height:300px"></div>
+  </div>
+  <div class="card">
+    <h3>Category Breakdown</h3>
+    <div id="chartBreakdownPie" style="height:280px"></div>
+  </div>
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <h3 id="bdTxnHead">Transactions</h3>
+      <div id="bdCF"></div>
+    </div>
+    <ul class="txn-list" id="breakdownTxnList"></ul>
+  </div>
+</div>
+
+<!-- ==================== PAGE: MONTH DETAIL ==================== -->
+<div id="page-month" class="page">
+  <button class="back-btn" onclick="navigate('home')"><i class="fa-solid fa-arrow-left"></i> Home</button>
+  <div class="page-header" id="monthTitle"></div>
+  <div class="page-subheader" id="monthSub"></div>
+
+  <div class="toggle-bar">
+    <button class="toggle-btn active" id="monthPieBtn" onclick="setMonthView('pie',this)">Pie Chart</button>
+    <button class="toggle-btn" id="monthSankeyBtn" onclick="setMonthView('sankey',this)">Sankey Flow</button>
+  </div>
+
+  <div class="card">
+    <div id="chartMonthDetail" style="height:360px"></div>
+  </div>
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <h3 id="monthTxnHead">Transactions</h3>
+      <div id="moCF"></div>
+    </div>
+    <ul class="txn-list" id="monthTxnList"></ul>
+  </div>
+</div>
+
+<!-- ==================== PAGE: CATEGORY DETAIL ==================== -->
+<div id="page-category" class="page">
+  <button class="back-btn" onclick="navigate('home')"><i class="fa-solid fa-arrow-left"></i> Home</button>
+  <div class="page-header" id="catTitle"></div>
+  <div class="page-subheader" id="catSub"></div>
+
+  <div class="target-row">
+    <label>Monthly Target $</label>
+    <input type="number" class="target-input" id="catTargetInput" placeholder="0.00" step="10">
+    <button class="target-save" onclick="saveTarget()">Save</button>
+  </div>
+
+  <div class="card">
+    <h3>Spending Trend</h3>
+    <div id="chartCatTrend" style="height:240px"></div>
+  </div>
+
+  <div class="card">
+    <h3 id="catTxnTitle">Transactions</h3>
+    <ul class="txn-list" id="catTxnList"></ul>
+  </div>
+</div>
+
+
+<!-- ==================== PAGE: IMPORT ==================== -->
+<div id="page-import" class="page">
+  <button class="back-btn" onclick="navigate('home')"><i class="fa-solid fa-arrow-left"></i> Home</button>
+  <div id="importGate">
+    <div class="pw-overlay">
+      <i class="fa-solid fa-lock"></i>
+      <h2>Import Transactions</h2>
+      <p>Enter password to unlock</p>
+      <input type="password" class="pw-input" id="pwInp" placeholder="Password" onkeydown="if(event.key==='Enter')chkPw()">
+      <button class="pw-submit" onclick="chkPw()">Unlock</button>
+      <div class="pw-error-msg" id="pwErr"></div>
+    </div>
+  </div>
+  <div id="importUpload" style="display:none">
+    <div class="page-header">Import Statements</div>
+    <div class="page-subheader">Upload Amex CSV or MSUFCU PDF files</div>
+    <div class="upload-zone" id="upZone">
+      <i class="fa-solid fa-cloud-arrow-up"></i>
+      <p>Tap to upload or drag &amp; drop files</p>
+      <div class="fmts">Supports: .csv, .pdf</div>
+      <input type="file" id="fileInp" multiple accept=".csv,.pdf">
+    </div>
+    <div class="parse-status" id="parseSt" style="display:none">
+      <span id="parseTxt">Parsing files...</span>
+    </div>
+  </div>
+  <div id="importReview" style="display:none">
+    <div class="page-header">Review Transactions</div>
+    <div class="page-subheader" id="rvSub"></div>
+    <div id="fcBox"></div>
+  </div>
+</div>
+
+
+<script>
+// ========= DATA =========
+const ALL_TXN = [
+  // Historical (May-Aug 21)
+  {"d":"2026-05-03","m":"MSU Chec","c":"Rent","desc":"MI Rent","a":1000},{"d":"2026-05-17","m":"Amex CC","c":"Leisure/ Eating out","desc":"Coffee","a":12.66},{"d":"2026-05-17","m":"Amex CC","c":"Leisure/ Eating out","desc":"Coffee","a":3.04},{"d":"2026-05-17","m":"Amex CC","c":"Groceries","desc":"Trader Joe's","a":26.93},{"d":"2026-05-19","m":"MSU Chec","c":"Leisure/ Eating out","desc":"Uttoron Subscription","a":100},{"d":"2026-05-20","m":"Amex CC","c":"Leisure/ Eating out","desc":"Coffee","a":11.52},{"d":"2026-05-20","m":"Amex CC","c":"Car/Transportation","desc":"Car Wash","a":10.77},{"d":"2026-05-20","m":"Amex CC","c":"Leisure/ Eating out","desc":"Fried Chicken","a":35.54},{"d":"2026-05-20","m":"Amex CC","c":"Car/Transportation","desc":"Parking downtown","a":91.58},{"d":"2026-05-21","m":"Amex CC","c":"Leisure/ Eating out","desc":"Coffee","a":9.01},{"d":"2026-05-21","m":"MSU Chec","c":"Leisure/ Eating out","desc":"Lunch with Arun","a":90},{"d":"2026-05-22","m":"Amex CC","c":"Groceries","desc":"Fuel","a":59.65},{"d":"2026-05-22","m":"Amex CC","c":"Car/Transportation","desc":"Fuel","a":5.62},{"d":"2026-05-23","m":"Amex CC","c":"Groceries","desc":"Indian Groceries","a":47.3},{"d":"2026-05-23","m":"Amex CC","c":"Leisure/ Eating out","desc":"Coffee","a":22.13},{"d":"2026-05-24","m":"Amex CC","c":"Car/Transportation","desc":"Fuel","a":37.87},{"d":"2026-05-24","m":"Amex CC","c":"Groceries","desc":"QFC","a":37.87},{"d":"2026-05-25","m":"Amex CC","c":"Car/Transportation","desc":"Car lease","a":365.36},{"d":"2026-05-25","m":"Amex CC","c":"Leisure/ Eating out","desc":"Eating out","a":190},{"d":"2026-05-26","m":"Chase Chec","c":"Car/Transportation","desc":"Car Insurance","a":852},{"d":"2026-05-26","m":"Amex CC","c":"Utilities","desc":"Utilities","a":95},{"d":"2026-05-27","m":"MSU Chec","c":"Debt","desc":"Ed Loan + Mum","a":800},{"d":"2026-05-28","m":"Amex CC","c":"Leisure/ Eating out","desc":"Coffee","a":12.66},{"d":"2026-05-28","m":"Amex CC","c":"Groceries","desc":"QFC","a":16.65},{"d":"2026-05-29","m":"Amex CC","c":"Leisure/ Eating out","desc":"Coffee","a":14.53},{"d":"2026-05-29","m":"Amex CC","c":"Car/Transportation","desc":"Fuel","a":11.91},{"d":"2026-05-30","m":"Amex CC","c":"Groceries","desc":"Trader Joe's","a":35.25},{"d":"2026-05-31","m":"Amex CC","c":"Shopping","desc":"Amazon","a":216.27},{"d":"2026-05-31","m":"Amex CC","c":"Leisure/ Eating out","desc":"Coffee","a":10.31},{"d":"2026-05-31","m":"Amex CC","c":"Car/Transportation","desc":"Fuel","a":11.72},
+  {"d":"2026-06-01","m":"Amex CC","c":"Groceries","desc":"Groceries","a":58.36},{"d":"2026-06-01","m":"Amex CC","c":"Groceries","desc":"Indian Groceries","a":59.42},{"d":"2026-06-01","m":"Amex CC","c":"Car/Transportation","desc":"Fuel","a":15.72},{"d":"2026-06-03","m":"MSU Chec","c":"Rent","desc":"MI rent","a":959.17},{"d":"2026-06-03","m":"Amex CC","c":"Car/Transportation","desc":"Fuel","a":41.19},{"d":"2026-06-04","m":"MSU Chec","c":"Car/Transportation","desc":"Lease Transfer","a":500},{"d":"2026-06-06","m":"Amex CC","c":"Travel/Holiday","desc":"Stubhub Tickets: Trace","a":1043.21},{"d":"2026-06-07","m":"Amex CC","c":"Groceries","desc":"Groceries","a":55.64},{"d":"2026-06-08","m":"Amex CC","c":"Utilities","desc":"Utilities","a":163.05},{"d":"2026-06-09","m":"MSU Chec","c":"Debt","desc":"Sent Home","a":800},{"d":"2026-06-10","m":"Amex CC","c":"Leisure/ Eating out","desc":"Eating out","a":69.98},{"d":"2026-06-10","m":"Amex CC","c":"Groceries","desc":"Costco","a":375},{"d":"2026-06-10","m":"Amex CC","c":"Leisure/ Eating out","desc":"Eating out","a":59.63},{"d":"2026-06-11","m":"Amex CC","c":"Groceries","desc":"Groceries","a":37.25},{"d":"2026-06-11","m":"Amex CC","c":"Leisure/ Eating out","desc":"Eating out","a":17.95},{"d":"2026-06-13","m":"Amex CC","c":"Leisure/ Eating out","desc":"Eating out","a":18.88},{"d":"2026-06-13","m":"Amex CC","c":"Car/Transportation","desc":"Fuel","a":8.99},{"d":"2026-06-14","m":"Amex CC","c":"Groceries","desc":"Groceries","a":7.14},{"d":"2026-06-15","m":"Amex CC","c":"Leisure/ Eating out","desc":"Eating out","a":13.35},{"d":"2026-06-15","m":"Amex CC","c":"Groceries","desc":"Groceries","a":41.49},{"d":"2026-06-17","m":"Amex CC","c":"Leisure/ Eating out","desc":"Coffee","a":11.21},{"d":"2026-06-18","m":"Amex CC","c":"Groceries","desc":"Groceries","a":64.79},{"d":"2026-06-18","m":"Amex CC","c":"Groceries","desc":"Indian Groceries","a":54.97},{"d":"2026-06-18","m":"Amex CC","c":"Leisure/ Eating out","desc":"Eating out","a":34.3},{"d":"2026-06-19","m":"Amex CC","c":"Health/ Beauty","desc":"Health","a":80.3},{"d":"2026-06-20","m":"Amex CC","c":"Groceries","desc":"Groceries","a":48.59},{"d":"2026-06-21","m":"Amex CC","c":"Leisure/ Eating out","desc":"Coffee","a":12.21},{"d":"2026-06-21","m":"Amex CC","c":"Home Capital Exp","desc":"Home stuff","a":15.84},{"d":"2026-06-21","m":"Amex CC","c":"Home Capital Exp","desc":"Home stuff","a":252.42},{"d":"2026-06-22","m":"Chase Chec","c":"Home Capital Exp","desc":"PS + Wheel","a":620},{"d":"2026-06-24","m":"Amex CC","c":"Leisure/ Eating out","desc":"Coffee","a":7.17},{"d":"2026-06-25","m":"Amex CC","c":"Leisure/ Eating out","desc":"Eating out","a":10.19},{"d":"2026-06-25","m":"Amex CC","c":"Home Capital Exp","desc":"Home stuff","a":34.73},{"d":"2026-06-26","m":"Amex CC","c":"Home Capital Exp","desc":"Home stuff","a":176.5},{"d":"2026-06-27","m":"MSU Chec","c":"Misc","desc":"Mum Tickets","a":1500},{"d":"2026-06-27","m":"Amex CC","c":"Leisure/ Eating out","desc":"Eating out","a":8.91},{"d":"2026-06-28","m":"MSU Chec","c":"Rent","desc":"Rent","a":800},{"d":"2026-06-29","m":"Amex CC","c":"Leisure/ Eating out","desc":"Eating out","a":238.5},{"d":"2026-06-30","m":"MSU Chec","c":"Shopping","desc":"Munu","a":400},
+  {"d":"2026-07-01","m":"Amex CC","c":"Car/Transportation","desc":"Fuel","a":54.72},{"d":"2026-07-02","m":"MSU Chec","c":"Debt","desc":"Sent Home","a":800},{"d":"2026-07-04","m":"Amex CC","c":"Car/Transportation","desc":"Fuel","a":35.36},{"d":"2026-07-05","m":"Amex CC","c":"Health/ Beauty","desc":"Health","a":39.67},{"d":"2026-07-05","m":"Amex CC","c":"Home Capital Exp","desc":"Home stuff","a":207.98},{"d":"2026-07-06","m":"Amex CC","c":"Groceries","desc":"Groceries","a":255.74},{"d":"2026-07-07","m":"Amex CC","c":"Utilities","desc":"Utilities","a":297.75},{"d":"2026-07-08","m":"Amex CC","c":"Leisure/ Eating out","desc":"Eating out","a":118.78},{"d":"2026-07-09","m":"MSU Chec","c":"Rent","desc":"Rent","a":959.17},{"d":"2026-07-10","m":"Amex CC","c":"Groceries","desc":"Groceries","a":46.23},{"d":"2026-07-11","m":"Amex CC","c":"Groceries","desc":"Groceries","a":45.96},{"d":"2026-07-12","m":"Amex CC","c":"Shopping","desc":"Shopping","a":44.11},{"d":"2026-07-13","m":"Amex CC","c":"Car/Transportation","desc":"Fuel","a":15.74},{"d":"2026-07-14","m":"Amex CC","c":"Leisure/ Eating out","desc":"Eating out","a":17.09},{"d":"2026-07-15","m":"Amex CC","c":"Leisure/ Eating out","desc":"Eating out","a":190.97},{"d":"2026-07-18","m":"Amex CC","c":"Car/Transportation","desc":"Car stuff","a":88.83},{"d":"2026-07-19","m":"Amex CC","c":"Leisure/ Eating out","desc":"Eating out","a":14.99},{"d":"2026-07-29","m":"MSU Chec","c":"Misc","desc":"Mum Tickets","a":1500},{"d":"2026-07-30","m":"MSU Chec","c":"Rent","desc":"Rent","a":800},{"d":"2026-07-31","m":"MSU Chec","c":"Shopping","desc":"Munu","a":400},
+  {"d":"2026-08-01","m":"MSU Chec","c":"Debt","desc":"Ed Loan + Mum","a":800},{"d":"2026-08-09","m":"MSU Chec","c":"Rent","desc":"Rent","a":800},{"d":"2026-08-14","m":"Amex CC","c":"Groceries","desc":"Groceries","a":14.99},
+  // New data (Aug 22 - Nov 13)
+  {"d":"2026-08-03","m":"MSU Chec","c":"Home Capital Exp","desc":"Pre-owned Furniture","a":10},{"d":"2026-08-10","m":"MSU Chec","c":"Health/ Beauty","desc":"Gym (Anytime Fitness)","a":14.99},{"d":"2026-08-11","m":"MSU Chec","c":"Rent","desc":"Rent","a":792.01},{"d":"2026-08-14","m":"MSU Chec","c":"Misc","desc":"Costco (Amazon party)","a":466.25},{"d":"2026-08-15","m":"MSU Chec","c":"Leisure/ Eating out","desc":"Lunch with Arun","a":60},{"d":"2026-08-16","m":"MSU Chec","c":"Car/Transportation","desc":"Parking","a":5.5},{"d":"2026-08-17","m":"MSU Chec","c":"Misc","desc":"Sent to Munu (Aunt)","a":364},{"d":"2026-08-22","m":"Amex CC","c":"Leisure/ Eating out","desc":"Mee Sum Pastry","a":23},{"d":"2026-08-22","m":"Amex CC","c":"Home Capital Exp","desc":"Sur La Table","a":66.22},{"d":"2026-08-22","m":"Amex CC","c":"Leisure/ Eating out","desc":"Thai Street Grill","a":44.63},{"d":"2026-08-22","m":"Amex CC","c":"Groceries","desc":"Tiny's Organic","a":15.26},{"d":"2026-08-22","m":"Amex CC","c":"Car/Transportation","desc":"SpotHero Parking","a":8.49},{"d":"2026-08-22","m":"Amex CC","c":"Leisure/ Eating out","desc":"The Potter's","a":16.58},{"d":"2026-08-23","m":"Amex CC","c":"Groceries","desc":"Rise and Shine","a":10.55},{"d":"2026-08-23","m":"Amex CC","c":"Utilities","desc":"Amazon Prime","a":7.94},{"d":"2026-08-24","m":"Amex CC","c":"Utilities","desc":"Spotify","a":12.99},{"d":"2026-08-24","m":"MSU Chec","c":"Health/ Beauty","desc":"Gym (Anytime Fitness)","a":14.99},{"d":"2026-08-26","m":"Amex CC","c":"Travel/Holiday","desc":"Airbnb","a":194.43},{"d":"2026-08-26","m":"Amex CC","c":"Groceries","desc":"Fred Meyer","a":27.73},{"d":"2026-08-26","m":"Amex CC","c":"Leisure/ Eating out","desc":"La Palme","a":68.62},{"d":"2026-08-26","m":"MSU Chec","c":"Car/Transportation","desc":"Car Lease (Honda)","a":365.36},{"d":"2026-08-27","m":"Amex CC","c":"Travel/Holiday","desc":"Booking.com","a":163.74},{"d":"2026-08-27","m":"Amex CC","c":"Utilities","desc":"Comcast/Xfinity","a":51.58},{"d":"2026-08-28","m":"Amex CC","c":"Leisure/ Eating out","desc":"Saffron Truck","a":13.3},{"d":"2026-08-28","m":"Amex CC","c":"Car/Transportation","desc":"Shell Gas","a":67.07},{"d":"2026-08-28","m":"Amex CC","c":"Groceries","desc":"Whole Foods","a":56.47},{"d":"2026-08-28","m":"Amex CC","c":"Car/Transportation","desc":"Lyft","a":17.94},{"d":"2026-08-28","m":"Amex CC","c":"Car/Transportation","desc":"SpotHero","a":8.99},{"d":"2026-08-29","m":"Amex CC","c":"Leisure/ Eating out","desc":"Domino's","a":37.25},{"d":"2026-08-29","m":"Amex CC","c":"Leisure/ Eating out","desc":"Kapaws Iskrem","a":8.24},{"d":"2026-08-29","m":"Amex CC","c":"Leisure/ Eating out","desc":"Molka Xete","a":22.35},{"d":"2026-08-29","m":"Amex CC","c":"Leisure/ Eating out","desc":"Whidbey Island Bagel","a":26.63},{"d":"2026-08-29","m":"Amex CC","c":"Car/Transportation","desc":"WS Ferries","a":24.1},{"d":"2026-08-30","m":"Amex CC","c":"Misc","desc":"Deception Pass","a":16},{"d":"2026-08-30","m":"Amex CC","c":"Groceries","desc":"Swagath International","a":50.88},{"d":"2026-08-30","m":"Amex CC","c":"Leisure/ Eating out","desc":"Martini Bar","a":70},{"d":"2026-08-30","m":"Amex CC","c":"Leisure/ Eating out","desc":"Lord Hill Espresso","a":4},{"d":"2026-08-30","m":"Amex CC","c":"Leisure/ Eating out","desc":"McDonald's","a":16.77},{"d":"2026-08-30","m":"Amex CC","c":"Health/ Beauty","desc":"Haircut (Great Clips)","a":30},{"d":"2026-08-31","m":"MSU Chec","c":"Debt","desc":"Sent Home (Wise)","a":989.94},
+  {"d":"2026-09-01","m":"Amex CC","c":"Home Capital Exp","desc":"KeyMe Locksmiths","a":12.13},{"d":"2026-09-01","m":"Amex CC","c":"Shopping","desc":"Merrell.com (shoes)","a":145.58},{"d":"2026-09-02","m":"MSU Chec","c":"Rent","desc":"Rent","a":1784.54},{"d":"2026-09-03","m":"Amex CC","c":"Groceries","desc":"Fred Meyer","a":10.88},{"d":"2026-09-03","m":"MSU Chec","c":"Debt","desc":"Sent Home (Wise)","a":800},{"d":"2026-09-04","m":"Amex CC","c":"Leisure/ Eating out","desc":"Domino's","a":49.65},{"d":"2026-09-04","m":"Amex CC","c":"Leisure/ Eating out","desc":"Sodam Chicken","a":39.65},{"d":"2026-09-05","m":"Amex CC","c":"Leisure/ Eating out","desc":"Chai N More","a":50.44},{"d":"2026-09-06","m":"Amex CC","c":"Leisure/ Eating out","desc":"Always Summer","a":21.32},{"d":"2026-09-06","m":"Amex CC","c":"Shopping","desc":"Best Buy","a":553.48},{"d":"2026-09-06","m":"Amex CC","c":"Leisure/ Eating out","desc":"Chipotle","a":38.19},{"d":"2026-09-06","m":"Amex CC","c":"Leisure/ Eating out","desc":"South Fork","a":64.08},{"d":"2026-09-06","m":"Amex CC","c":"Groceries","desc":"Highland Station","a":25.01},{"d":"2026-09-06","m":"Amex CC","c":"Misc","desc":"Woodland Park Zoo","a":73},{"d":"2026-09-06","m":"Amex CC","c":"Misc","desc":"Mud Bay (Gift dogs India)","a":72.8},{"d":"2026-09-06","m":"Amex CC","c":"Shopping","desc":"Woodland Park gift shop","a":14.39},{"d":"2026-09-06","m":"Amex CC","c":"Utilities","desc":"PayRange Mobile","a":25},{"d":"2026-09-07","m":"Amex CC","c":"Leisure/ Eating out","desc":"90 Degrees Bangkok","a":140},{"d":"2026-09-07","m":"Amex CC","c":"Groceries","desc":"Fred Meyer","a":13.98},{"d":"2026-09-07","m":"Amex CC","c":"Utilities","desc":"Seattle City Light","a":144.97},{"d":"2026-09-07","m":"Amex CC","c":"Groceries","desc":"Walmart","a":175.1},{"d":"2026-09-08","m":"Amex CC","c":"Utilities","desc":"Apple TV","a":12.99},{"d":"2026-09-08","m":"Amex CC","c":"Home Consumables","desc":"Amazon Marketplace","a":37.75},{"d":"2026-09-08","m":"MSU Chec","c":"Health/ Beauty","desc":"Gym (Anytime Fitness)","a":14.99},{"d":"2026-09-09","m":"Amex CC","c":"Groceries","desc":"Mayuri Foods","a":40.39},{"d":"2026-09-10","m":"Amex CC","c":"Car/Transportation","desc":"Shell Gas","a":30.29},{"d":"2026-09-11","m":"Amex CC","c":"Leisure/ Eating out","desc":"Pagliacci Pizza","a":37.07},{"d":"2026-09-11","m":"Amex CC","c":"Leisure/ Eating out","desc":"Sultan Gyro","a":36.22},{"d":"2026-09-11","m":"Amex CC","c":"Groceries","desc":"Trader Joe's","a":47.59},{"d":"2026-09-12","m":"Amex CC","c":"Groceries","desc":"PCC Natural","a":25.47},{"d":"2026-09-13","m":"Amex CC","c":"Groceries","desc":"Rise and Shine","a":38.38},{"d":"2026-09-13","m":"Amex CC","c":"Car/Transportation","desc":"SEA Airport Parking","a":8},{"d":"2026-09-14","m":"Amex CC","c":"Leisure/ Eating out","desc":"Ramen Danbo","a":29.81},{"d":"2026-09-16","m":"Amex CC","c":"Leisure/ Eating out","desc":"Midori Teriyaki","a":16.57},{"d":"2026-09-17","m":"Amex CC","c":"Leisure/ Eating out","desc":"PlayStation Network","a":21.19},{"d":"2026-09-19","m":"Amex CC","c":"Groceries","desc":"QFC","a":56.3},{"d":"2026-09-19","m":"Amex CC","c":"Groceries","desc":"Rise and Shine","a":41.63},{"d":"2026-09-19","m":"Amex CC","c":"Car/Transportation","desc":"Union 76 Gas","a":63.69},{"d":"2026-09-19","m":"Amex CC","c":"Car/Transportation","desc":"Meineke","a":203.82},{"d":"2026-09-20","m":"Amex CC","c":"Leisure/ Eating out","desc":"Starbucks","a":15},{"d":"2026-09-20","m":"Amex CC","c":"Leisure/ Eating out","desc":"Recreation.gov","a":5},{"d":"2026-09-21","m":"MSU Chec","c":"Health/ Beauty","desc":"Gym (Anytime Fitness)","a":14.99},{"d":"2026-09-22","m":"Amex CC","c":"Utilities","desc":"Amazon Prime","a":7.94},{"d":"2026-09-23","m":"Amex CC","c":"Leisure/ Eating out","desc":"Petra Bistro","a":20.91},{"d":"2026-09-24","m":"Amex CC","c":"Utilities","desc":"Spotify","a":12.99},{"d":"2026-09-26","m":"Amex CC","c":"Travel/Holiday","desc":"Booking.com","a":5203.44},{"d":"2026-09-26","m":"Amex CC","c":"Groceries","desc":"Apna Bazar","a":29.94},{"d":"2026-09-26","m":"Amex CC","c":"Groceries","desc":"Rise and Shine","a":44.96},{"d":"2026-09-27","m":"Amex CC","c":"Utilities","desc":"Comcast/Xfinity","a":51.58},{"d":"2026-09-28","m":"MSU Chec","c":"Car/Transportation","desc":"Car Lease (Honda)","a":365.36},{"d":"2026-09-29","m":"Amex CC","c":"Leisure/ Eating out","desc":"Midori Teriyaki","a":23.2},{"d":"2026-09-29","m":"Amex CC","c":"Misc","desc":"UPS Store","a":18.95},
+  {"d":"2026-10-01","m":"Amex CC","c":"Leisure/ Eating out","desc":"Grounded Espresso","a":5.59},{"d":"2026-10-01","m":"MSU Chec","c":"Health/ Beauty","desc":"Gym (Anytime Fitness)","a":25},{"d":"2026-10-02","m":"Amex CC","c":"Leisure/ Eating out","desc":"King Ler","a":33},{"d":"2026-10-02","m":"Amex CC","c":"Misc","desc":"UPS Store","a":34.5},{"d":"2026-10-02","m":"MSU Chec","c":"Rent","desc":"Rent","a":1781.98},{"d":"2026-10-03","m":"Amex CC","c":"Leisure/ Eating out","desc":"Dosa House","a":16.5},{"d":"2026-10-03","m":"Amex CC","c":"Groceries","desc":"PCC Natural","a":58.77},{"d":"2026-10-03","m":"Amex CC","c":"Health/ Beauty","desc":"Haircut (Great Clips)","a":30},{"d":"2026-10-03","m":"Amex CC","c":"Misc","desc":"FedEx Office","a":12.75},{"d":"2026-10-04","m":"Amex CC","c":"Groceries","desc":"Rise and Shine","a":6.3},{"d":"2026-10-04","m":"Amex CC","c":"Groceries","desc":"Rise and Shine","a":48.29},{"d":"2026-10-04","m":"Amex CC","c":"Car/Transportation","desc":"Union 76 Gas","a":66.1},{"d":"2026-10-04","m":"MSU Chec","c":"Debt","desc":"Sent Home (Wise)","a":800},{"d":"2026-10-05","m":"MSU Chec","c":"Health/ Beauty","desc":"Gym (Anytime Fitness)","a":14.99},{"d":"2026-10-08","m":"Amex CC","c":"Leisure/ Eating out","desc":"Asian Kitchen","a":40},{"d":"2026-10-08","m":"Amex CC","c":"Utilities","desc":"Apple TV","a":12.99},{"d":"2026-10-09","m":"MSU Chec","c":"Misc","desc":"Sister's Wedding (Wise)","a":1121.9},{"d":"2026-10-10","m":"Amex CC","c":"Groceries","desc":"Fred Meyer","a":19.51},{"d":"2026-10-10","m":"Amex CC","c":"Leisure/ Eating out","desc":"K1 Speed","a":144.49},{"d":"2026-10-10","m":"Amex CC","c":"Groceries","desc":"Rise and Shine","a":52.84},{"d":"2026-10-10","m":"Amex CC","c":"Car/Transportation","desc":"SpotHero","a":8.99},{"d":"2026-10-11","m":"Amex CC","c":"Leisure/ Eating out","desc":"Date Cafe","a":14.37},{"d":"2026-10-11","m":"Amex CC","c":"Leisure/ Eating out","desc":"Persepolis Grill","a":87.45},{"d":"2026-10-13","m":"Amex CC","c":"Leisure/ Eating out","desc":"PlayStation Network","a":11.12},{"d":"2026-10-14","m":"Amex CC","c":"Groceries","desc":"Top Tabacco","a":32},{"d":"2026-10-14","m":"Amex CC","c":"Leisure/ Eating out","desc":"Midori Teriyaki","a":23.2},{"d":"2026-10-16","m":"Amex CC","c":"Leisure/ Eating out","desc":"Sodam Chicken","a":34.35},{"d":"2026-10-17","m":"Amex CC","c":"Groceries","desc":"Mayuri Foods","a":38.8},{"d":"2026-10-17","m":"Amex CC","c":"Car/Transportation","desc":"Safeway Fuel","a":53.23},{"d":"2026-10-17","m":"Amex CC","c":"Groceries","desc":"Mayuri Foods","a":246.59},{"d":"2026-10-18","m":"Amex CC","c":"Groceries","desc":"Trader Joe's","a":8.96},{"d":"2026-10-18","m":"Amex CC","c":"Car/Transportation","desc":"Union 76 Gas","a":14.03},{"d":"2026-10-19","m":"MSU Chec","c":"Health/ Beauty","desc":"Gym (Anytime Fitness)","a":14.99},{"d":"2026-10-20","m":"Amex CC","c":"Leisure/ Eating out","desc":"DoorDash","a":23.35},{"d":"2026-10-20","m":"Amex CC","c":"Misc","desc":"Foreign Transaction Fee","a":0.63},{"d":"2026-10-21","m":"Amex CC","c":"Home Consumables","desc":"Amazon Marketplace","a":48.56},{"d":"2026-10-21","m":"Amex CC","c":"Groceries","desc":"Amazon.com","a":112.5},{"d":"2026-10-23","m":"Amex CC","c":"Utilities","desc":"Amazon Prime","a":8.28},{"d":"2026-10-24","m":"Amex CC","c":"Groceries","desc":"R & S Bakery","a":42.74},{"d":"2026-10-24","m":"Amex CC","c":"Utilities","desc":"Spotify","a":12.99},{"d":"2026-10-25","m":"Amex CC","c":"Leisure/ Eating out","desc":"Thai Bistro","a":18.86},{"d":"2026-10-26","m":"MSU Chec","c":"Debt","desc":"Sent Home (Remitly)","a":800},{"d":"2026-10-27","m":"Amex CC","c":"Groceries","desc":"QFC","a":10.24},{"d":"2026-10-27","m":"Amex CC","c":"Utilities","desc":"Comcast/Xfinity","a":51.58},{"d":"2026-10-27","m":"Amex CC","c":"Leisure/ Eating out","desc":"Taqueria Juarez","a":20.9},{"d":"2026-10-27","m":"MSU Chec","c":"Car/Transportation","desc":"Car Lease (Honda)","a":365.36},{"d":"2026-10-28","m":"Amex CC","c":"Leisure/ Eating out","desc":"Top Tabacco","a":28},{"d":"2026-10-29","m":"Amex CC","c":"Leisure/ Eating out","desc":"Midori Teriyaki","a":23.2},{"d":"2026-10-31","m":"Amex CC","c":"Leisure/ Eating out","desc":"Nazu's Cafe","a":65.83},{"d":"2026-10-31","m":"Amex CC","c":"Leisure/ Eating out","desc":"Museum of Seattle","a":87},{"d":"2026-10-31","m":"Amex CC","c":"Leisure/ Eating out","desc":"Museum of Seattle","a":184.2},{"d":"2026-10-31","m":"Amex CC","c":"Groceries","desc":"Braganza Tea","a":20.53},
+  {"d":"2026-11-01","m":"Amex CC","c":"Travel/Holiday","desc":"Luxor Hotel","a":178.58},{"d":"2026-11-01","m":"Amex CC","c":"Groceries","desc":"R & S Bakery","a":92.69},{"d":"2026-11-03","m":"Amex CC","c":"Leisure/ Eating out","desc":"Midori Teriyaki","a":23.3},{"d":"2026-11-05","m":"Amex CC","c":"Leisure/ Eating out","desc":"Gyro Saj","a":14.92},{"d":"2026-11-05","m":"Amex CC","c":"Groceries","desc":"QFC","a":23.22},{"d":"2026-11-06","m":"Amex CC","c":"Groceries","desc":"7-Eleven","a":5.79},{"d":"2026-11-06","m":"Amex CC","c":"Leisure/ Eating out","desc":"Kobe Bento Teriyaki","a":22.18},{"d":"2026-11-07","m":"Amex CC","c":"Car/Transportation","desc":"Chevron Gas","a":62.12},{"d":"2026-11-07","m":"Amex CC","c":"Groceries","desc":"Fred Meyer","a":82.36},{"d":"2026-11-07","m":"Amex CC","c":"Groceries","desc":"Mayuri Bakery","a":83.43},{"d":"2026-11-07","m":"Amex CC","c":"Groceries","desc":"Mayuri Foods","a":61.9},{"d":"2026-11-08","m":"Amex CC","c":"Utilities","desc":"Apple TV","a":12.99},{"d":"2026-11-08","m":"Amex CC","c":"Leisure/ Eating out","desc":"Bakery Nouveau","a":51.45},{"d":"2026-11-09","m":"Amex CC","c":"Utilities","desc":"Seattle City Light","a":115.78},{"d":"2026-11-13","m":"Amex CC","c":"Leisure/ Eating out","desc":"Global Smoke","a":24.28}
+];
+
+const INCOME = [{"d":"2026-05-01","a":1186.0,"t":"Chase Transfer In"},{"d":"2026-05-18","a":1755.0,"t":"Chase Transfer In"},{"d":"2026-05-29","a":5000.0,"t":"Chase Transfer In"},{"d":"2026-05-29","a":2000.0,"t":"Chase Transfer In"},{"d":"2026-06-30","a":8936.33,"t":"Amazon Salary"},{"d":"2026-07-31","a":2000.0,"t":"Amazon Salary"},{"d":"2026-08-04","a":5000,"t":"Chase Transfer In"},{"d":"2026-08-04","a":1144.84,"t":"Chase Transfer In"},{"d":"2026-08-28","a":770,"t":"Chase Transfer In"},{"d":"2026-08-31","a":2000,"t":"Amazon Salary"},{"d":"2026-09-03","a":4000,"t":"Chase Transfer In"},{"d":"2026-09-03","a":1940,"t":"Chase Transfer In"},{"d":"2026-09-21","a":632.07,"t":"Amazon EDI"},{"d":"2026-09-30","a":2000,"t":"Amazon Salary"},{"d":"2026-10-08","a":5000,"t":"Chase Transfer In"},{"d":"2026-10-08","a":898.84,"t":"Chase Transfer In"},{"d":"2026-10-30","a":2000,"t":"Amazon Salary"}];
+
+const ESSENTIAL_CATS = ['Rent','Car/Transportation','Utilities','Groceries','Debt','Home Consumables','Health/ Beauty'];
+const COLORS = ['#6366f1','#22c55e','#f59e0b','#ef4444','#3b82f6','#ec4899','#8b5cf6','#14b8a6','#f97316','#06b6d4','#84cc16','#e879f9'];
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// Budget targets stored in localStorage
+var _defaults={"targets":{"Rent":1750,"Car/Transportation":600,"Utilities":150,"Groceries":500,"Debt":1400,"Home Consumables":50,"Health/ Beauty":100,"Travel/Holiday":1900,"Leisure/ Eating out":650,"Shopping":250,"Misc":750,"Home Capital Exp":50},"qcats":["Leisure/ Eating out","Travel/Holiday","Shopping","Misc"]};
+var _state=(function(){
+  var s=null;
+  try{var ls=localStorage.getItem('expState');if(ls)s=JSON.parse(ls);}catch(e){}
+  if(!s)try{s=JSON.parse(window.name);}catch(e){}
+  if(!s||typeof s!=='object') s={};
+  if(!s.targets) s.targets={};
+  if(!s.qcats) s.qcats=_defaults.qcats.slice();
+  // Merge defaults for any missing target
+  for(var k in _defaults.targets){ if(!(k in s.targets)) s.targets[k]=_defaults.targets[k]; }
+  return s;
+})();
+var _targets=_state.targets;
+var _qcats=_state.qcats;
+function _saveState(){
+  var js=JSON.stringify(_state);
+  try{localStorage.setItem('expState',js);}catch(e){}
+  try{window.name=js;}catch(e){}
+}
+function getTargets(){ return _targets; }
+function setTargets(t){ _targets=t; _state.targets=t; _saveState(); }
+
+// State
+let currentBreakdown = 'essential';
+let currentMonth = null;
+let currentCat = null;
+let breakdownTimeMode = 'month';
+
+// Helpers
+function isEss(c){ return ESSENTIAL_CATS.includes(c); }
+function fmt(n){ return '$'+n.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}); }
+function fmt2(n){ return '$'+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+function getWeekLabel(d){
+  var dt=new Date(d);
+  var m=dt.getMonth(); // 0-indexed
+  var day=dt.getDate();
+  var wk=Math.ceil(day/7);
+  return 'Wk'+wk+'/'+MONTH_NAMES[m];
+}
+function getWeekSortKey(d){
+  var dt=new Date(d);
+  return dt.getFullYear()*10000+(dt.getMonth()+1)*100+Math.ceil(dt.getDate()/7);
+}
+function txnsByKey(k){ return ALL_TXN.filter(function(t){ return txnMonthKey(t.d)===k; }); }
+function currentMonthNum(){ return new Date().getMonth()+1; }
+function currentYear(){ return new Date().getFullYear(); }
+function mkKey(y,m){ return y+'-'+String(m).padStart(2,'0'); }
+function txnMonthKey(d){ return d.substring(0,7); }
+function parseKey(k){ var p=k.split('-'); return {y:parseInt(p[0]),m:parseInt(p[1])}; }
+function keyLabel(k){ var p=parseKey(k); return MONTH_NAMES[p.m-1]+' '+p.y; }
+function getDataKeys(){
+  var s={};ALL_TXN.forEach(function(t){s[txnMonthKey(t.d)]=1;});
+  return Object.keys(s).sort();
+}
+function lastNKeys(n){
+  var ck=mkKey(currentYear(),currentMonthNum());
+  var all=getDataKeys();
+  var idx=all.indexOf(ck);
+  if(idx===-1) idx=all.length;
+  var start=Math.max(0,idx-n+1);
+  return all.slice(start,idx+1);
+}
+function populateMonthSelect(selId,opts){
+  var el=document.getElementById(selId);if(!el)return;
+  var cur=el.value;el.innerHTML='';
+  if(opts.allTime) el.innerHTML+='<option value="all">All Time</option>';
+  var keys=getDataKeys().reverse();
+  keys.forEach(function(k){ el.innerHTML+='<option value="'+k+'">'+keyLabel(k)+'</option>'; });
+  if(opts.custom) el.innerHTML+='<option value="custom">Custom Range</option>';
+  if(opts.ranges){
+    var optG=document.createElement('optgroup');optG.label='Quick Ranges';
+    [{v:'last3',l:'Last 3 Months'},{v:'last6',l:'Last 6 Months'},{v:'last12',l:'Last 12 Months'}].forEach(function(r){
+      var o=document.createElement('option');o.value=r.v;o.textContent=r.l;optG.appendChild(o);
+    });
+    el.insertBefore(optG,el.firstChild);
+  }
+  // Restore selection if still valid
+  if(cur){var found=false;for(var i=0;i<el.options.length;i++){if(el.options[i].value===cur){el.selectedIndex=i;found=true;break;}} if(!found&&opts.defaultVal){for(var i=0;i<el.options.length;i++){if(el.options[i].value===opts.defaultVal){el.selectedIndex=i;break;}}}}
+  else if(opts.defaultVal){for(var i=0;i<el.options.length;i++){if(el.options[i].value===opts.defaultVal){el.selectedIndex=i;break;}}}
+}
+
+// ========= NAVIGATION =========
+function navigate(page, param) {
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  document.getElementById('page-'+page).classList.add('active');
+  window.scrollTo(0,0);
+  if(page==='home') renderHome();
+  else if(page==='breakdown'){ currentBreakdown=param; populateMonthSelect('bdRange',{allTime:true,custom:true,defaultVal:'all'}); var dk=getDataKeys();if(dk.length>0){document.getElementById('bdFrom').value=dk[0]+'-01';var lk=parseKey(dk[dk.length-1]);document.getElementById('bdTo').value=dk[dk.length-1]+'-'+new Date(lk.y,lk.m,0).getDate();}renderBreakdown(); }
+  else if(page==='month'){ currentMonth=param; renderMonthDetail(); }
+  else if(page==='category'){ currentCat=param; renderCategoryDetail(); }
+  else if(page==='import'){ document.getElementById('importGate').style.display='block';document.getElementById('importUpload').style.display='none';document.getElementById('importReview').style.display='none';document.getElementById('pwInp').value='';document.getElementById('pwErr').textContent=''; }
+}
+
+// ========= HOME =========
+// ========= MULTI-SELECT CATEGORY FILTER =========
+var _cfState={};
+function buildCF(wrId,cats,onChange){
+  var wr=document.getElementById(wrId);if(!wr)return;
+  // Skip rebuild if same categories (preserves checkbox state)
+  var cKey=cats.slice().sort().join('|');
+  if(wr.dataset.ckey===cKey){if(!window._cfCB)window._cfCB={};window._cfCB[wrId]=onChange;return;}
+  wr.dataset.ckey=cKey;
+  if(!_cfState[wrId])_cfState[wrId]=[];
+  var sel=_cfState[wrId];
+  var allOn=sel.length===0;
+  cats.sort();
+  var h='<div class="ms-wrap"><div class="ms-btn" id="'+wrId+'_b"><i class="fa-solid fa-filter" style="margin-right:4px;font-size:10px"></i>Category <span class="ms-n" id="'+wrId+'_n">'+(allOn?'All':sel.length)+'</span></div>';
+  h+='<div class="ms-dd" id="'+wrId+'_d">';
+  h+='<label class="hd"><input type="checkbox" id="'+wrId+'_a" '+(allOn?'checked':'')+' onchange="cfAll(this,\''+wrId+'\')"> All</label>';
+  cats.forEach(function(c){
+    var ck=allOn||sel.indexOf(c)>=0;
+    h+='<label><input type="checkbox" data-c="'+c+'" class="'+wrId+'_i" '+(ck?'checked':'')+' onchange="cfItem(\''+wrId+'\')"> '+c+'</label>';
+  });
+  h+='</div></div>';
+  wr.innerHTML=h;
+  document.getElementById(wrId+'_b').onclick=function(e){e.stopPropagation();document.querySelectorAll('.ms-dd.open').forEach(function(d){if(d.id!==wrId+'_d')d.classList.remove('open');});document.getElementById(wrId+'_d').classList.toggle('open');};
+  if(!window._cfCB)window._cfCB={};
+  window._cfCB[wrId]=onChange;
+}
+function cfAll(el,id){
+  document.querySelectorAll('.'+id+'_i').forEach(function(cb){cb.checked=el.checked;});
+  _cfApply(id);
+}
+function cfItem(id){
+  var cbs=document.querySelectorAll('.'+id+'_i');
+  var n=0;cbs.forEach(function(cb){if(cb.checked)n++;});
+  document.getElementById(id+'_a').checked=(n===cbs.length);
+  _cfApply(id);
+}
+function _cfApply(id){
+  var allCb=document.getElementById(id+'_a');
+  var sel=[];
+  if(!allCb.checked){
+    document.querySelectorAll('.'+id+'_i').forEach(function(cb){if(cb.checked)sel.push(cb.dataset.c);});
+  }
+  _cfState[id]=sel;
+  var cnt=sel.length===0?'All':sel.length;
+  document.getElementById(id+'_n').textContent=cnt;
+  if(window._cfCB&&window._cfCB[id])window._cfCB[id](sel);
+}
+document.addEventListener('click',function(e){if(!e.target.closest('.ms-wrap'))document.querySelectorAll('.ms-dd.open').forEach(function(d){d.classList.remove('open');});});
+
+
+function renderHome(){
+  // Populate dynamic selectors
+  var ck=mkKey(currentYear(),currentMonthNum());
+  populateMonthSelect('homeMonth',{allTime:true,defaultVal:ck});
+  populateMonthSelect('homeChartRange',{ranges:true,defaultVal:'last6'});
+
+  // ---- Essential / Non-Essential cards: always show current MTD ----
+  var cm=currentMonthNum(),cy=currentYear();
+  var cmKey=mkKey(cy,cm);
+  var cmTxn=ALL_TXN.filter(function(t){return txnMonthKey(t.d)===cmKey;});
+  var essMTD=0,nonMTD=0;
+  cmTxn.forEach(function(t){if(isEss(t.c))essMTD+=t.a;else nonMTD+=t.a;});
+  document.getElementById('essTotal').textContent=fmt(essMTD);
+  document.getElementById('nonEssTotal').textContent=fmt(nonMTD);
+
+  // 3-month average (last 3 full months before current)
+  var allKeys=getDataKeys();
+  var ckIdx=allKeys.indexOf(cmKey);
+  var avgKeys=[];
+  for(var ai=(ckIdx>=0?ckIdx:allKeys.length)-1;ai>=Math.max(0,(ckIdx>=0?ckIdx:allKeys.length)-3);ai--) avgKeys.push(allKeys[ai]);
+  var essAvgT=0,nonAvgT=0;
+  if(avgKeys.length>0){
+    avgKeys.forEach(function(k){
+      ALL_TXN.forEach(function(t){
+        if(txnMonthKey(t.d)===k){if(isEss(t.c))essAvgT+=t.a;else nonAvgT+=t.a;}
+      });
+    });
+    essAvgT=essAvgT/avgKeys.length;
+    nonAvgT=nonAvgT/avgKeys.length;
+  }
+  document.getElementById('essSub').textContent=MONTH_NAMES[cm-1]+' to date';
+  document.getElementById('nonEssSub').textContent=MONTH_NAMES[cm-1]+' to date';
+  document.getElementById('essAvg').textContent=avgKeys.length>0?'3-mo avg: '+fmt(Math.round(essAvgT)):'';
+  document.getElementById('nonEssAvg').textContent=avgKeys.length>0?'3-mo avg: '+fmt(Math.round(nonAvgT)):'';
+
+  var targets=getTargets();
+
+  // Quick category cards - dynamic from _qcats
+  var qcIcons={'Leisure/ Eating out':'🍽️','Travel/Holiday':'✈️','Shopping':'🛍️','Misc':'📦','Rent':'🏠','Car/Transportation':'🚗','Utilities':'⚡','Groceries':'🛒','Debt':'💸','Health/ Beauty':'💊','Home Capital Exp':'🛋️','Home Consumables':'🧴','Savings/ Investments':'💰'};
+  var allCats=[];var _cs={};ALL_TXN.forEach(function(t){_cs[t.c]=1;});allCats=Object.keys(_cs).sort();
+  buildCF('qcPicker',allCats,function(sel){
+    if(sel.length>0&&sel.length<=6){_qcats=sel;_state.qcats=sel;_saveState();renderHome();}
+  });
+  _cfState['qcPicker']=_qcats.slice();
+  var grid=document.getElementById('qcGrid');
+  grid.innerHTML='';
+  _qcats.forEach(function(cat){
+    var mtd=cmTxn.filter(function(t){return t.c===cat;}).reduce(function(s,t){return s+t.a;},0);
+    var catAvg=0;
+    if(avgKeys.length>0){
+      avgKeys.forEach(function(k){ALL_TXN.forEach(function(t){if(txnMonthKey(t.d)===k&&t.c===cat)catAvg+=t.a;});});
+      catAvg=catAvg/avgKeys.length;
+    }
+    var tgt=targets[cat]||0;
+    var tgtH='';
+    if(tgt>0){var ov=mtd>tgt;tgtH='Target: '+fmt(tgt)+' \u00b7 '+(ov?'<span style="color:var(--err)">Over '+fmt(Math.round(mtd-tgt))+'</span>':'<span style="color:var(--suc)">'+fmt(Math.round(tgt-mtd))+' left</span>');}
+    else{tgtH='<span style="color:var(--text-mut)">No target</span>';}
+    var c=document.createElement('div');c.className='cat-qcard';
+    c.onclick=(function(ct){return function(){navigate('category',ct);};})(cat);
+    c.innerHTML='<div class="cq-icon">'+(qcIcons[cat]||'\U0001F4CA')+'</div><div class="cq-name">'+cat+'</div><div class="cq-val">'+fmt(mtd)+'</div><div class="cq-sub">'+MONTH_NAMES[cm-1]+' to date'+(avgKeys.length>0?' \u00b7 3-mo avg: '+fmt(Math.round(catAvg)):'')+'</div><div class="cq-sub" style="margin-top:2px">'+tgtH+'</div>';
+    grid.appendChild(c);
+  });
+
+  // ---- Subtitle from dropdown ----
+  var selVal=document.getElementById('homeMonth').value;
+  var filt;
+  if(!selVal||selVal==='all'){
+    filt=ALL_TXN; var rangeLabel='All Time';
+  } else {
+    filt=ALL_TXN.filter(function(t){return txnMonthKey(t.d)===selVal;});
+    var rangeLabel=keyLabel(selVal);
+  }
+  var essTotal=0,nonEssTotal=0;
+  filt.forEach(function(t){if(isEss(t.c))essTotal+=t.a;else nonEssTotal+=t.a;});
+  document.getElementById('homeSubtitle').textContent=rangeLabel+' \u00b7 '+filt.length+' transactions \u00b7 '+fmt(essTotal+nonEssTotal)+' total';
+
+  // ---- Monthly chart with range control ----
+  var chartRange=document.getElementById('homeChartRange').value;
+  var chartKeys;
+  if(chartRange==='last3') chartKeys=lastNKeys(3);
+  else if(chartRange==='last6') chartKeys=lastNKeys(6);
+  else if(chartRange==='last12') chartKeys=lastNKeys(12);
+  else chartKeys=getDataKeys();
+  var monthData={};
+  ALL_TXN.forEach(function(t){
+    var k=txnMonthKey(t.d);
+    if(chartKeys.indexOf(k)>=0) monthData[k]=(monthData[k]||0)+t.a;
+  });
+  Highcharts.chart('chartMonthlyHome',{
+    chart:{type:'column',backgroundColor:'transparent',style:{fontFamily:'inherit'}},
+    title:{text:null},colors:COLORS,
+    xAxis:{categories:chartKeys.map(function(k){return keyLabel(k);}),labels:{style:{color:'#9aa0b0',fontSize:'11px'}},gridLineColor:'#2a2d3a',lineColor:'#2a2d3a'},
+    yAxis:{title:{text:null},labels:{format:'${value:,.0f}',style:{color:'#9aa0b0'}},gridLineColor:'#2a2d3a'},
+    tooltip:{backgroundColor:'#1a1d27',borderColor:'#2a2d3a',style:{color:'#e8eaed'},shadow:false,pointFormat:'<b>${point.y:,.0f}</b>'},
+    plotOptions:{column:{borderRadius:6,borderWidth:0,colorByPoint:true,cursor:'pointer',dataLabels:{enabled:true,format:'${y:,.0f}',style:{color:'#e8eaed',textOutline:'none',fontSize:'10px',fontWeight:'600'}},point:{events:{click:function(){var k=chartKeys[this.index];navigate('month',k);}}}}},
+    series:[{name:'Spending',data:chartKeys.map(function(k){return Math.round((monthData[k]||0)*100)/100;})}],
+    legend:{enabled:false},credits:{enabled:false}
+  });
+
+}
+
+// ========= BREAKDOWN (Essential / Non-Essential) =========
+function setBreakdownTime(mode, btn){
+  breakdownTimeMode=mode;
+  document.querySelectorAll('#breakdownTimeToggle .toggle-btn').forEach(function(b){b.classList.remove('active');});
+  btn.classList.add('active');
+  renderBreakdown();
+}
+
+function getBdDateRange(){
+  var sel=document.getElementById('bdRange').value;
+  if(sel==='all') return{from:'2000-01-01',to:'2099-12-31',label:'All Time'};
+  if(sel==='custom'){
+    var f=document.getElementById('bdFrom').value||'2020-01-01';
+    var t=document.getElementById('bdTo').value||'2099-12-31';
+    return{from:f,to:t,label:f+' to '+t};
+  }
+  // sel is a month key like "2026-10"
+  var p=parseKey(sel);
+  var ms=String(p.m).padStart(2,'0');
+  var last=new Date(p.y,p.m,0).getDate();
+  return{from:p.y+'-'+ms+'-01',to:p.y+'-'+ms+'-'+last,label:keyLabel(sel)};
+}
+function onBdRangeChange(){
+  var sel=document.getElementById('bdRange').value;
+  var cd=document.getElementById('bdCustomDates');
+  cd.style.display=sel==='custom'?'flex':'none';
+  if(sel!=='custom') renderBreakdown();
+}
+function filterByRange(txns,range){
+  return txns.filter(function(t){return t.d>=range.from&&t.d<=range.to;});
+}
+function renderBreakdown(){
+  var isEssential=currentBreakdown==='essential';
+  var range=getBdDateRange();
+  var all=ALL_TXN.filter(function(t){return isEssential?isEss(t.c):!isEss(t.c);});
+  var filtered=filterByRange(all,range);
+  var total=filtered.reduce(function(s,t){return s+t.a;},0);
+  document.getElementById('breakdownTitle').textContent=(isEssential?'Essential':'Non-Essential')+' Spending';
+  document.getElementById('breakdownSub').textContent=fmt(total)+' · '+filtered.length+' transactions · '+range.label;
+
+  // Time-based chart (always uses full data for the bar chart to show trends)
+  if(breakdownTimeMode==='month'){
+    // Build per-category per-month data for stacked columns
+    var catMonth={};
+    all.forEach(function(t){
+      var k=txnMonthKey(t.d);
+      if(!catMonth[t.c])catMonth[t.c]={};
+      catMonth[t.c][k]=(catMonth[t.c][k]||0)+t.a;
+    });
+    var monthSet={};all.forEach(function(t){monthSet[txnMonthKey(t.d)]=1;});
+    var months=Object.keys(monthSet).sort();
+    var cats=Object.keys(catMonth);
+    cats.sort(function(a,b){
+      var ta=0,tb=0;months.forEach(function(k){ta+=(catMonth[a][k]||0);tb+=(catMonth[b][k]||0);});return tb-ta;
+    });
+    var stackSeries=cats.map(function(c,i){
+      return{name:c,color:COLORS[i%COLORS.length],data:months.map(function(k){return Math.round((catMonth[c][k]||0)*100)/100;})};
+    });
+    Highcharts.chart('chartBreakdown',{
+      chart:{type:'column',backgroundColor:'transparent'},title:{text:null},
+      xAxis:{categories:months.map(function(k){return keyLabel(k);}),labels:{style:{color:'#9aa0b0'}},gridLineColor:'#2a2d3a',lineColor:'#2a2d3a'},
+      yAxis:{title:{text:null},labels:{format:'${value:,.0f}',style:{color:'#9aa0b0'}},gridLineColor:'#2a2d3a',stackLabels:{enabled:true,format:'${total:,.0f}',style:{color:'#e8eaed',textOutline:'none',fontSize:'10px',fontWeight:'600'}}},
+      tooltip:{backgroundColor:'#1a1d27',borderColor:'#2a2d3a',style:{color:'#e8eaed'},shadow:false,headerFormat:'<b>{point.x}</b><br/>',pointFormat:'{series.name}: <b>${point.y:,.0f}</b><br/>',footerFormat:'Total: <b>${point.total:,.0f}</b>'},
+      plotOptions:{column:{stacking:'normal',borderRadius:2,borderWidth:0}},
+      series:stackSeries,
+      legend:{enabled:false},credits:{enabled:false}
+    });
+  } else {
+    var catWeek={},weekLabels={};
+    filtered.forEach(function(t){
+      var sk=getWeekSortKey(t.d),lbl=getWeekLabel(t.d);
+      weekLabels[sk]=lbl;
+      if(!catWeek[t.c])catWeek[t.c]={};
+      catWeek[t.c][sk]=(catWeek[t.c][sk]||0)+t.a;
+    });
+    var weeks=Object.keys(weekLabels).map(Number).sort();
+    var wCats=Object.keys(catWeek);
+    wCats.sort(function(a,b){
+      var ta=0,tb=0;weeks.forEach(function(w){ta+=(catWeek[a][w]||0);tb+=(catWeek[b][w]||0);});return tb-ta;
+    });
+    var wSeries=wCats.map(function(c,i){
+      return{name:c,color:COLORS[i%COLORS.length],data:weeks.map(function(w){return Math.round((catWeek[c][w]||0)*100)/100;})};
+    });
+    Highcharts.chart('chartBreakdown',{
+      chart:{type:'column',backgroundColor:'transparent'},title:{text:null},
+      xAxis:{categories:weeks.map(function(w){return weekLabels[w];}),labels:{style:{color:'#9aa0b0',fontSize:'10px'}},gridLineColor:'#2a2d3a',lineColor:'#2a2d3a'},
+      yAxis:{title:{text:null},labels:{format:'${value:,.0f}',style:{color:'#9aa0b0'}},gridLineColor:'#2a2d3a',stackLabels:{enabled:true,format:'${total:,.0f}',style:{color:'#e8eaed',textOutline:'none',fontSize:'10px',fontWeight:'600'}}},
+      tooltip:{backgroundColor:'#1a1d27',borderColor:'#2a2d3a',style:{color:'#e8eaed'},shadow:false,headerFormat:'<b>{point.x}</b><br/>',pointFormat:'{series.name}: <b>${point.y:,.0f}</b><br/>',footerFormat:'Total: <b>${point.total:,.0f}</b>'},
+      plotOptions:{column:{stacking:'normal',borderRadius:2,borderWidth:0}},
+      series:wSeries,
+      legend:{enabled:false},credits:{enabled:false}
+    });
+  }
+
+  // Pie chart — uses filtered (date-ranged) data
+  var byCat={};
+  filtered.forEach(function(t){byCat[t.c]=(byCat[t.c]||0)+t.a;});
+  Highcharts.chart('chartBreakdownPie',{
+    chart:{type:'pie',backgroundColor:'transparent'},title:{text:null},colors:COLORS,
+    tooltip:{backgroundColor:'#1a1d27',borderColor:'#2a2d3a',style:{color:'#e8eaed'},shadow:false,pointFormat:'<b>${point.y:,.2f}</b> ({point.percentage:.1f}%)'},
+    plotOptions:{pie:{innerSize:'50%',borderWidth:0,borderRadius:4,dataLabels:{enabled:true,format:'<b>{point.name}</b><br/>${point.y:,.0f}',style:{color:'#9aa0b0',textOutline:'none',fontSize:'10px'},distance:12}}},
+    series:[{data:Object.keys(byCat).sort(function(a,b){return byCat[b]-byCat[a];}).map(function(c){return{name:c,y:Math.round(byCat[c]*100)/100};})}],
+    legend:{enabled:false},credits:{enabled:false}
+  });
+
+  // Build category filter (only updates txn list, not charts)
+  var cats={};filtered.forEach(function(t){cats[t.c]=1;});
+  buildCF('bdCF',Object.keys(cats),function(){_bdFiltered=filtered;renderBdTxnList();});
+  _bdFiltered=filtered;
+  renderBdTxnList();
+}
+function renderBdTxnList(){
+  var filtered=_bdFiltered||[];
+  var bSel=_cfState['bdCF']||[];
+  var txnFilt=bSel.length>0?filtered.filter(function(t){return bSel.indexOf(t.c)>=0;}):filtered;
+  document.getElementById('bdTxnHead').textContent='Transactions ('+txnFilt.length+(bSel.length>0?' \u00b7 '+bSel.length+' categories':'')+')';
+  var list=document.getElementById('breakdownTxnList');
+  list.innerHTML='';
+  txnFilt.sort(function(a,b){return b.d.localeCompare(a.d);}).forEach(function(t){
+    list.innerHTML+='<li class="txn-item"><div class="txn-left"><div class="txn-desc">'+esc(t.desc)+'</div><div class="txn-date">'+t.d+' <span class="txn-method">'+t.m+'</span> <span class="badge '+(isEss(t.c)?'badge-ess':'badge-non')+'">'+t.c+'</span></div></div><div class="txn-amount">'+fmt2(t.a)+'</div></li>';
+  });
+}
+var _bdFiltered=[];
+
+// ========= MONTH DETAIL =========
+function setMonthView(view, btn){
+  document.querySelectorAll('#page-month .toggle-btn').forEach(function(b){b.classList.remove('active');});
+  btn.classList.add('active');
+  renderMonthChart(view);
+}
+
+function renderMonthDetail(){
+  var mk=currentMonth; // now a key like "2026-10"
+  // Support legacy number format (in case called with a number)
+  if(typeof mk==='number') mk=mkKey(currentYear(),mk);
+  var txns=txnsByKey(mk);
+  var total=txns.reduce(function(s,t){return s+t.a;},0);
+  document.getElementById('monthTitle').textContent=keyLabel(mk);
+  document.getElementById('monthSub').textContent=fmt(total)+' \u00b7 '+txns.length+' transactions';
+  document.getElementById('monthPieBtn').classList.add('active');
+  document.getElementById('monthSankeyBtn').classList.remove('active');
+  renderMonthChart('pie');
+
+  // Build category filter (only updates txn list, not charts)
+  var mcats={};txns.forEach(function(t){mcats[t.c]=1;});
+  buildCF('moCF',Object.keys(mcats),function(){_moTxns=txns;renderMoTxnList();});
+  _moTxns=txns;
+  renderMoTxnList();
+}
+function renderMoTxnList(){
+  var txns=_moTxns||[];
+  var mSel=_cfState['moCF']||[];
+  var mTxnFilt=mSel.length>0?txns.filter(function(t){return mSel.indexOf(t.c)>=0;}):txns;
+  document.getElementById('monthTxnHead').textContent='Transactions ('+mTxnFilt.length+(mSel.length>0?' \u00b7 '+mSel.length+' categories':'')+')';
+  var list=document.getElementById('monthTxnList');
+  list.innerHTML='';
+  mTxnFilt.sort(function(a,b){return b.d.localeCompare(a.d);}).forEach(function(t){
+    list.innerHTML+='<li class="txn-item"><div class="txn-left"><div class="txn-desc">'+esc(t.desc)+'</div><div class="txn-date">'+t.d+' <span class="txn-method">'+t.m+'</span> <span class="badge '+(isEss(t.c)?'badge-ess':'badge-non')+'">'+t.c+'</span></div></div><div class="txn-amount">'+fmt2(t.a)+'</div></li>';
+  });
+}
+var _moTxns=[];
+
+function renderMonthChart(view){
+  var mk=currentMonth;
+  if(typeof mk==='number') mk=mkKey(currentYear(),mk);
+  var txns=txnsByKey(mk);
+  var p=parseKey(mk);
+  if(view==='pie'){
+    var byCat={};
+    txns.forEach(function(t){byCat[t.c]=(byCat[t.c]||0)+t.a;});
+    Highcharts.chart('chartMonthDetail',{
+      chart:{type:'pie',backgroundColor:'transparent'},title:{text:null},colors:COLORS,
+      tooltip:{backgroundColor:'#1a1d27',borderColor:'#2a2d3a',style:{color:'#e8eaed'},shadow:false,pointFormat:'<b>${point.y:,.2f}</b> ({point.percentage:.1f}%)'},
+      plotOptions:{pie:{innerSize:'50%',borderWidth:0,borderRadius:4,dataLabels:{enabled:true,format:'<b>{point.name}</b><br/>${point.y:,.0f}',style:{color:'#9aa0b0',textOutline:'none',fontSize:'10px'},distance:15}}},
+      series:[{data:Object.keys(byCat).sort(function(a,b){return byCat[b]-byCat[a];}).map(function(c){return{name:c,y:Math.round(byCat[c]*100)/100};})}],
+      legend:{enabled:false},credits:{enabled:false}
+    });
+  } else {
+    var monthIncome=INCOME.filter(function(inc){return txnMonthKey(inc.d)===mk;});
+    var totalInc=monthIncome.reduce(function(s,inc){return s+inc.a;},0);
+    var essSpend=0, nonSpend=0, byCat={};
+    txns.forEach(function(t){
+      byCat[t.c]=(byCat[t.c]||0)+t.a;
+      if(isEss(t.c)) essSpend+=t.a; else nonSpend+=t.a;
+    });
+    var totalSpend=essSpend+nonSpend;
+    var unspent=totalInc>0?Math.max(0,totalInc-totalSpend):0;
+
+    var nodes=[],data=[];
+    if(totalInc>0){
+      // We have income data: Income -> Essential, Non-Essential, Unspent
+      nodes.push({id:'Income',color:'#3b82f6'});
+      nodes.push({id:'Essential',color:'#22c55e',column:1});
+      nodes.push({id:'Non-Essential',color:'#f59e0b',column:1});
+      if(essSpend>0) data.push(['Income','Essential',Math.round(essSpend)]);
+      if(nonSpend>0) data.push(['Income','Non-Essential',Math.round(nonSpend)]);
+      if(unspent>0){
+        nodes.push({id:'Unspent',color:'#06b6d4',column:1});
+        data.push(['Income','Unspent',Math.round(unspent)]);
+      }
+    } else {
+      // No income data: Total Spend -> Essential, Non-Essential
+      nodes.push({id:'Total Spend',color:'#6366f1'});
+      nodes.push({id:'Essential',color:'#22c55e',column:1});
+      nodes.push({id:'Non-Essential',color:'#f59e0b',column:1});
+      if(essSpend>0) data.push(['Total Spend','Essential',Math.round(essSpend)]);
+      if(nonSpend>0) data.push(['Total Spend','Non-Essential',Math.round(nonSpend)]);
+    }
+
+    // Sort categories: essential by amount desc, then non-essential by amount desc
+    var essCats=Object.keys(byCat).filter(function(c){return isEss(c);}).sort(function(a,b){return byCat[b]-byCat[a];});
+    var nonCats=Object.keys(byCat).filter(function(c){return !isEss(c);}).sort(function(a,b){return byCat[b]-byCat[a];});
+    var orderedCats=essCats.concat(nonCats);
+    var ci=4;
+    orderedCats.forEach(function(c){
+      var bucket=isEss(c)?'Essential':'Non-Essential';
+      data.push([bucket,c,Math.round(byCat[c])]);
+      nodes.push({id:c,color:COLORS[ci%COLORS.length],column:2});
+      ci++;
+    });
+
+    var nCats=orderedCats.length;
+    Highcharts.chart('chartMonthDetail',{
+      chart:{backgroundColor:'transparent',height:Math.max(420,nCats*36+60)},title:{text:null},
+      tooltip:{backgroundColor:'#1a1d27',borderColor:'#2a2d3a',style:{color:'#e8eaed',fontSize:'12px'},shadow:false,
+        nodeFormat:'{point.name}: <b>${point.sum:,.0f}</b>',
+        pointFormat:'{point.fromNode.name} \u2192 {point.toNode.name}: <b>${point.weight:,.0f}</b>'},
+      plotOptions:{sankey:{nodeWidth:22,nodePadding:10,curveFactor:0.33,
+        dataLabels:{enabled:true,style:{color:'#e8eaed',textOutline:'none',fontSize:'11px',fontWeight:'500'},
+          nodeFormatter:function(){
+            var n=this.point.name,s=this.point.sum;
+            if(n==='Unspent') return '\u{1f4b0} Unspent: $'+Highcharts.numberFormat(s,0);
+            return n+': $'+Highcharts.numberFormat(s,0);
+          }}}},
+      series:[{type:'sankey',keys:['from','to','weight'],data:data,nodes:nodes}],
+      credits:{enabled:false}
+    });
+  }
+}
+
+// ========= CATEGORY DETAIL =========
+function renderCategoryDetail(){
+  var cat=currentCat;
+  var allCatTxns=ALL_TXN.filter(function(t){return t.c===cat;});
+  var ck=mkKey(currentYear(),currentMonthNum());
+  var cmTxns=allCatTxns.filter(function(t){return txnMonthKey(t.d)===ck;});
+  var cmTotal=cmTxns.reduce(function(s,t){return s+t.a;},0);
+  var targets=getTargets();
+  var cmLabel=keyLabel(ck);
+  document.getElementById('catTitle').textContent=cat;
+  document.getElementById('catSub').textContent=cmLabel+': '+fmt2(cmTotal)+(targets[cat]?' / Target: '+fmt(targets[cat]):'');
+  document.getElementById('catTargetInput').value=targets[cat]||'';
+  document.getElementById('catTxnTitle').textContent=cmLabel+' Transactions ('+cmTxns.length+')';
+
+  // Monthly trend - use all data months dynamically
+  var byMonth={};
+  allCatTxns.forEach(function(t){var k=txnMonthKey(t.d);byMonth[k]=(byMonth[k]||0)+t.a;});
+  var months=getDataKeys();
+  Highcharts.chart('chartCatTrend',{
+    chart:{type:'column',backgroundColor:'transparent'},title:{text:null},colors:['#6366f1'],
+    xAxis:{categories:months.map(function(k){return keyLabel(k);}),labels:{style:{color:'#9aa0b0',fontSize:'10px'}},gridLineColor:'#2a2d3a',lineColor:'#2a2d3a'},
+    yAxis:{title:{text:null},labels:{format:'${value:,.0f}',style:{color:'#9aa0b0'}},gridLineColor:'#2a2d3a',plotLines:targets[cat]?[{color:'#ef4444',width:2,value:targets[cat],dashStyle:'Dash',label:{text:'Target: '+fmt(targets[cat]),style:{color:'#ef4444',fontSize:'11px'},align:'right'}}]:[]},
+    tooltip:{backgroundColor:'#1a1d27',borderColor:'#2a2d3a',style:{color:'#e8eaed'},shadow:false,pointFormat:'<b>${point.y:,.2f}</b>'},
+    plotOptions:{column:{borderRadius:6,borderWidth:0,dataLabels:{enabled:true,format:'${y:,.0f}',style:{color:'#e8eaed',textOutline:'none',fontSize:'10px'}}}},
+    series:[{name:cat,data:months.map(function(k){return Math.round((byMonth[k]||0)*100)/100;})}],
+    legend:{enabled:false},credits:{enabled:false}
+  });
+
+  // Transaction list for current month
+  var list=document.getElementById('catTxnList');
+  list.innerHTML='';
+  cmTxns.sort(function(a,b){return b.d.localeCompare(a.d);}).forEach(function(t){
+    list.innerHTML+='<li class="txn-item"><div class="txn-left"><div class="txn-desc">'+esc(t.desc)+'</div><div class="txn-date">'+t.d+' <span class="txn-method">'+t.m+'</span></div></div><div class="txn-amount">'+fmt2(t.a)+'</div></li>';
+  });
+  if(cmTxns.length===0) list.innerHTML='<li class="txn-item"><div class="txn-left"><div class="txn-desc" style="color:var(--text-mut)">No transactions this month</div></div></li>';
+}
+
+function saveTarget(){
+  var val=parseFloat(document.getElementById('catTargetInput').value);
+  var targets=getTargets();
+  if(val>0) targets[currentCat]=val; else delete targets[currentCat];
+  setTargets(targets);
+  navigate('home');
+}
+
+
+// ========= IMPORT MODULE =========
+var impParsed=[],impIdx=0,impOK=[];
+
+// Password check
+function chkPw(){
+  var v=document.getElementById('pwInp').value;
+  if(v==='Kitty@2023'){
+    document.getElementById('importGate').style.display='none';
+    document.getElementById('importUpload').style.display='block';
+    initUpZone();
+  }else{
+    document.getElementById('pwErr').textContent='Wrong password';
+    var inp=document.getElementById('pwInp');inp.classList.add('pw-err');
+    setTimeout(function(){inp.classList.remove('pw-err');},400);
+  }
+}
+
+// Upload zone setup
+function initUpZone(){
+  var z=document.getElementById('upZone'),fi=document.getElementById('fileInp');
+  z.onclick=function(){fi.click();};
+  fi.onchange=function(){handleImpFiles(fi.files);};
+  z.ondragover=function(e){e.preventDefault();z.classList.add('dragover');};
+  z.ondragleave=function(){z.classList.remove('dragover');};
+  z.ondrop=function(e){e.preventDefault();z.classList.remove('dragover');handleImpFiles(e.dataTransfer.files);};
+}
+
+// Auto-categorization rules
+var CRULES=[
+  {r:/FRED.?MEYER|QFC|TRADER JOE|SAFEWAY(?!.*FUEL)|MAYURI|R\s*&\s*S BAKERY|7.ELEVEN|UWAJIMAYA|WHOLE\s*FOODS|WALMART(?!.*(?:COM|ONLINE))|SWAGATH|APNA BAZAR|HIGHLAND FARMS|PCC NATURAL|RISE AND SHIN|BRAGANZA|TINY.S ORGAN|H.MART|COSTCO(?!.*\$466)/i,c:'Groceries'},
+  {r:/DOMINO|CHIPOTLE|STARBUCKS|TERIYAKI|MIDORI|GYRO|BAKERY NOUVEAU|PAGLIACCI|RAMEN|THAI|SUSHI|BURGER|PIZZA|CAFE|COFFEE|BENTO|CHAI N MORE|DOSA|MCDONALD|POPEYES|TAQUERIA|PERSEPOLIS|PETRA|SULTAN|ASIAN KITCHEN|MOLKA|KAPAWS|BAGEL|ESPRESSO|MARTINI|SOUTH FORK|ALWAYS SUMMER|SODAM|SAFFRON|GLOBAL SMOKE|TOP TAB|K1 SPEED|MUSEUM|RECREATION\.GOV|PLAYSTATION|DOORDASH|POTTER|CRUMBL|TACO|SUBWAY|PANDA EXPRESS|MOD PIZZA|IVAR|JACK IN THE BOX|SONIC DRIVE|WENDY/i,c:'Leisure/ Eating out'},
+  {r:/CHEVRON|SHELL|ARCO|FUEL|UNION 76|PARKING|SPOTHERO|SDOT|UBER|LYFT|FERRIES|MEINEKE|CAR WASH|HONDA PMT|JIFFY LUBE|SAFEWAY.*FUEL|COSTCO.*GAS/i,c:'Car/Transportation'},
+  {r:/SEATTLE CITY LIGHT|COMCAST|XFINITY|SPOTIFY|APPLE\.COM\/BILL|AMAZON PRIME|PAYRANGE|APPLE TV/i,c:'Utilities'},
+  {r:/AIRBNB|BOOKING\.COM|HOTEL|CASINO|LUXOR|FLIGHT|AIRLINE|EXPEDIA/i,c:'Travel/Holiday'},
+  {r:/BEST BUY|MERRELL|NORDSTROM|TARGET(?!.*GROC)|ROSS STORES|MARSHALLS|TJ.?MAXX/i,c:'Shopping'},
+  {r:/SUR LA TABLE|KEYME|LOCKSMITH|IKEA|HOME DEPOT|LOWES/i,c:'Home Capital Exp'},
+  {r:/GREAT CLIPS|ANYTIME FIT|GYM|ULTA|SEPHORA/i,c:'Health/ Beauty'},
+  {r:/LINDEN HIGHLANDS/i,c:'Rent'},
+  {r:/UPS STORE|FEDEX|MUD BAY|WOODLAND PARK ZOO/i,c:'Misc'},
+  {r:/AMAZON\.COM|AMZN MKTP|AMAZON MKTPL/i,c:'Home Consumables'},
+  {r:/WISE\b/i,c:'Debt'},
+  {r:/REMITLY/i,c:'Debt'},
+  {r:/AMEX EPAYMENT|AUTOPAY|Online Payment/i,c:'__SKIP__'},
+  {r:/AMAZON DATA SERV.*PAYROLL|ACH AMAZON|RTP.*PRATIK BHATTACHARJEE|EDI PYMNTS/i,c:'__INCOME__'},
+  {r:/Transfer To Share|Transfer From Share|ComputerLine|Dividend|Balance Forward|Ending Balance/i,c:'__SKIP__'},
+];
+
+function autoCat(d){for(var i=0;i<CRULES.length;i++){if(CRULES[i].r.test(d))return CRULES[i].c;}return'Uncategorized';}
+
+// CSV parser (Amex format)
+function parseCSVFile(file){
+  return new Promise(function(res){
+    var rdr=new FileReader();
+    rdr.onload=function(e){
+      var lines=e.target.result.split('\n'),rows=[],hdr=-1;
+      for(var i=0;i<Math.min(lines.length,10);i++){if(/date/i.test(lines[i])&&/amount/i.test(lines[i])){hdr=i;break;}}
+      if(hdr===-1)hdr=0;
+      var hs=lines[hdr].split(',').map(function(h){return h.trim().replace(/"/g,'').toLowerCase();});
+      var di=hs.findIndex(function(h){return/date/.test(h);}),
+          xi=hs.findIndex(function(h){return/description|merchant|memo/.test(h);}),
+          ai=hs.findIndex(function(h){return/^amount$/.test(h);});
+      if(di===-1||ai===-1){res([]);return;}
+      for(var i=hdr+1;i<lines.length;i++){
+        var cols=lines[i].split(',').map(function(c){return c.trim().replace(/"/g,'');});
+        if(cols.length<=ai)continue;
+        var amt=parseFloat(cols[ai]);
+        if(isNaN(amt)||amt<=0)continue;
+        var desc=xi>=0?cols[xi]:'Unknown',dp=new Date(cols[di]);
+        if(isNaN(dp.getTime()))continue;
+        var ds=dp.getFullYear()+'-'+String(dp.getMonth()+1).padStart(2,'0')+'-'+String(dp.getDate()).padStart(2,'0');
+        var cat=autoCat(desc);
+        var shortD=desc.length>50?desc.substring(0,50)+'...':desc;
+        rows.push({d:ds,desc:shortD,a:amt,raw:desc,m:'Amex CC',cat:cat});
+      }
+      res(rows);
+    };
+    rdr.readAsText(file);
+  });
+}
+
+// PDF parser (MSUFCU format)
+async function parsePDFFile(file){
+  if(typeof pdfjsLib==='undefined')throw new Error('PDF.js not loaded');
+  pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+  var ab=await file.arrayBuffer();
+  var pdf=await pdfjsLib.getDocument({data:ab}).promise;
+  var txt='';
+  for(var p=1;p<=pdf.numPages;p++){
+    var pg=await pdf.getPage(p),tc=await pg.getTextContent();
+    txt+=tc.items.map(function(i){return i.str;}).join(' ')+'\n';
+  }
+  // Detect year from statement
+  var ym=txt.match(/statement\s+period.*?(20\d{2})/i)||txt.match(/(20\d{2})/);
+  var yr=ym?ym[1]:'2026';
+  // Parse transactions: look for date amount balance type description patterns
+  var rows=[],rx=/(\d{2})-(\d{2})\s+([\d,]+\.\d{2})\s+[\d,]+\.\d{2}\s+(Withdrawal|Deposit)\s+(.+?)(?=\d{2}-\d{2}\s|$)/g,m;
+  while((m=rx.exec(txt))!==null){
+    var mo=m[1],dy=m[2],amt=parseFloat(m[3].replace(/,/g,'')),tp=m[4],desc=m[5].trim();
+    var ds=yr+'-'+mo+'-'+dy,cat=autoCat(desc);
+    if(tp==='Deposit'){
+      if(cat==='__INCOME__'||cat==='__SKIP__'){rows.push({d:ds,desc:desc.substring(0,50),a:amt,raw:desc,m:'MSU Chec',cat:cat});continue;}
+    }
+    if(tp==='Withdrawal'){
+      rows.push({d:ds,desc:desc.substring(0,50),a:amt,raw:desc,m:'MSU Chec',cat:cat});
+    }
+  }
+  return rows;
+}
+
+// Handle uploaded files
+async function handleImpFiles(files){
+  var st=document.getElementById('parseSt'),stx=document.getElementById('parseTxt');
+  st.style.display='block';impParsed=[];
+  for(var i=0;i<files.length;i++){
+    var f=files[i],nm=f.name.toLowerCase();
+    stx.textContent='Parsing: '+f.name+'...';
+    try{
+      if(nm.endsWith('.csv')){var r=await parseCSVFile(f);impParsed=impParsed.concat(r);}
+      else if(nm.endsWith('.pdf')){var r=await parsePDFFile(f);impParsed=impParsed.concat(r);}
+      else{stx.innerHTML='<span style="color:var(--warn)">Unsupported: '+f.name+'. Use CSV or PDF.</span>';continue;}
+    }catch(err){stx.innerHTML='<span style="color:var(--err)">Error: '+err.message+'</span>';}
+  }
+  var spend=impParsed.filter(function(r){return r.cat!=='__SKIP__'&&r.cat!=='__INCOME__';});
+  var inc=impParsed.filter(function(r){return r.cat==='__INCOME__';});
+  impParsed=spend;
+  if(impParsed.length>0){
+    stx.innerHTML='Found <span class="cnt">'+impParsed.length+'</span> spending transactions'+(inc.length>0?' (+'+inc.length+' income)':'');
+    setTimeout(function(){startFC();},800);
+  }else{stx.innerHTML='<span style="color:var(--warn)">No transactions found.</span>';}
+}
+
+// ========= FLASHCARD REVIEW =========
+var CATS=['Rent','Utilities','Groceries','Home Consumables','Car/Transportation','Leisure/ Eating out','Home Capital Exp','Health/ Beauty','Debt','Shopping','Travel/Holiday','Savings/ Investments','Misc'];
+
+function startFC(){
+  document.getElementById('importUpload').style.display='none';
+  document.getElementById('importReview').style.display='block';
+  impIdx=0;impOK=[];
+  document.getElementById('rvSub').textContent=impParsed.length+' transactions to review';
+  showFC();
+}
+
+function showFC(){
+  var box=document.getElementById('fcBox');
+  if(impIdx>=impParsed.length){showFCSummary();return;}
+  var t=impParsed[impIdx];
+  var cs=CATS.slice();if(t.cat==='Uncategorized')cs.unshift('Uncategorized');
+  var opts=cs.map(function(c){return'<option value="'+c+'"'+(c===t.cat?' selected':'')+'>'+c+'</option>';}).join('');
+  box.innerHTML='<div class="fc" id="curFC">'+
+    '<div class="fc-ctr">'+(impIdx+1)+' of '+impParsed.length+'</div>'+
+    '<div class="fc-amt">'+fmt2(t.a)+'</div>'+
+    '<div class="fc-dsc">'+esc(t.desc)+'</div>'+
+    '<div class="fc-raw">Raw: '+esc(t.raw)+'</div>'+
+    '<div class="fc-dt">'+t.d+' &middot; '+t.m+'</div>'+
+    '<div class="fc-fld"><label>Category</label><select class="fc-sel" id="fcC">'+opts+'</select></div>'+
+    '<div class="fc-fld"><label>Description</label><input type="text" class="fc-inp" id="fcD" value="'+esc(t.desc)+'"></div>'+
+    '<div class="fc-fld"><label>Amount</label><input type="number" class="fc-inp" id="fcA" value="'+t.a+'" step="0.01"></div>'+
+    '<div class="fc-acts">'+
+      '<button class="fc-b r" onclick="fcNo()"><i class="fa-solid fa-forward"></i> Skip</button>'+
+      '<button class="fc-b g" onclick="fcYes()"><i class="fa-solid fa-check"></i> Confirm</button>'+
+    '</div>'+
+  '</div>';
+}
+
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function fcYes(){
+  var t=impParsed[impIdx];
+  impOK.push({d:t.d,m:t.m,c:document.getElementById('fcC').value,desc:document.getElementById('fcD').value,a:parseFloat(document.getElementById('fcA').value)});
+  var el=document.getElementById('curFC');el.classList.add('ok');
+  setTimeout(function(){impIdx++;showFC();},200);
+}
+
+function fcNo(){
+  var el=document.getElementById('curFC');el.classList.add('no');
+  setTimeout(function(){impIdx++;showFC();},200);
+}
+
+function showFCSummary(){
+  var box=document.getElementById('fcBox');
+  var tot=impOK.reduce(function(s,t){return s+t.a;},0);
+  var skp=impParsed.length-impOK.length;
+  box.innerHTML='<div class="fc-sum">'+
+    '<i class="fa-solid fa-clipboard-check" style="font-size:36px;color:var(--suc);margin-bottom:12px"></i>'+
+    '<h3>Review Complete</h3>'+
+    '<div class="st"><b>'+impOK.length+'</b> confirmed</div>'+
+    '<div class="st"><b>'+skp+'</b> skipped</div>'+
+    '<div class="st">Total: <b>'+fmt2(tot)+'</b></div>'+
+    '<button class="fc-lock" onclick="lockImp()"><i class="fa-solid fa-lock" style="margin-right:6px"></i>Lock In '+impOK.length+' Transactions</button>'+
+  '</div>';
+}
+
+function lockImp(){
+  impOK.forEach(function(t){ALL_TXN.push(t);});
+  ALL_TXN.sort(function(a,b){return a.d.localeCompare(b.d);});
+  try{localStorage.setItem('expTxnData',JSON.stringify(ALL_TXN));}catch(e){}
+  var box=document.getElementById('fcBox');
+  box.innerHTML='<div class="fc-sum">'+
+    '<i class="fa-solid fa-check-circle" style="font-size:48px;color:var(--suc);margin-bottom:12px"></i>'+
+    '<h3>Locked In!</h3>'+
+    '<div class="st">'+impOK.length+' transactions added</div>'+
+    '<button class="fc-lock" onclick="navigate(\'home\')" style="background:var(--pri)"><i class="fa-solid fa-home" style="margin-right:6px"></i>Back to Dashboard</button>'+
+  '</div>';
+  impParsed=[];impIdx=0;impOK=[];
+}
+
+// Restore from localStorage if newer
+try{var sv=localStorage.getItem('expTxnData');if(sv){var p=JSON.parse(sv);if(p.length>ALL_TXN.length){ALL_TXN.length=0;p.forEach(function(t){ALL_TXN.push(t);});}}}catch(e){}
+
+// Initial render
+renderHome();
+</script>
+</body>
+</html>
