@@ -14,6 +14,7 @@
   <script src="https://cdn.jsdelivr.net/npm/highcharts@12.1.2/modules/accessibility.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
 :root{--bg:#0f1117;--bg-card:#1a1d27;--bg-card-hover:#22253a;--text:#e8eaed;--text-sec:#9aa0b0;--text-mut:#6b7280;--border:#2a2d3a;--border-lt:#22253a;--pri:#6366f1;--pri-lt:rgba(99,102,241,.15);--suc:#22c55e;--suc-lt:rgba(34,197,94,.15);--err:#ef4444;--err-lt:rgba(239,68,68,.15);--warn:#f59e0b;--warn-lt:rgba(245,158,11,.15);--r:12px;--rs:8px;--font:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Roboto,sans-serif;--mono:'SF Mono','Cascadia Code',Consolas,monospace}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -1495,25 +1496,25 @@ function exportCSV(){
 }
 
 function exportXLSX(){
-  var xml='<?xml version="1.0"?>\n<?mso-application progid="Excel.Sheet"?>\n';
-  xml+='<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"\n';
-  xml+=' xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">\n';
-  xml+='<Worksheet ss:Name="Spending"><Table>\n';
-  xml+='<Row><Cell><Data ss:Type="String">Date</Data></Cell><Cell><Data ss:Type="String">Method</Data></Cell><Cell><Data ss:Type="String">Category</Data></Cell><Cell><Data ss:Type="String">Description</Data></Cell><Cell><Data ss:Type="String">Amount</Data></Cell></Row>\n';
+  if(typeof XLSX==='undefined'){alert('Excel library not loaded. Check internet connection.');return;}
+  var wb=XLSX.utils.book_new();
+  // Spending sheet
   var txns=getExpTxns();
-  txns.forEach(function(t){
-    xml+='<Row><Cell><Data ss:Type="String">'+esc(t.d)+'</Data></Cell><Cell><Data ss:Type="String">'+esc(t.m)+'</Data></Cell><Cell><Data ss:Type="String">'+esc(t.c)+'</Data></Cell><Cell><Data ss:Type="String">'+esc(t.desc||'')+'</Data></Cell><Cell><Data ss:Type="Number">'+t.a.toFixed(2)+'</Data></Cell></Row>\n';
-  });
-  xml+='</Table></Worksheet>\n';
-  xml+='<Worksheet ss:Name="Income"><Table>\n';
-  xml+='<Row><Cell><Data ss:Type="String">Date</Data></Cell><Cell><Data ss:Type="String">Amount</Data></Cell><Cell><Data ss:Type="String">Source</Data></Cell></Row>\n';
+  var sData=[['Date','Method','Category','Description','Amount']];
+  txns.forEach(function(t){sData.push([t.d,t.m,t.c,t.desc||'',t.a]);});
+  var ws=XLSX.utils.aoa_to_sheet(sData);
+  // Set column widths
+  ws['!cols']=[{wch:12},{wch:12},{wch:22},{wch:40},{wch:12}];
+  XLSX.utils.book_append_sheet(wb,ws,'Spending');
+  // Income sheet
   var inc=getExpIncome();
-  inc.forEach(function(t){
-    xml+='<Row><Cell><Data ss:Type="String">'+esc(t.d)+'</Data></Cell><Cell><Data ss:Type="Number">'+t.a.toFixed(2)+'</Data></Cell><Cell><Data ss:Type="String">'+esc(t.t)+'</Data></Cell></Row>\n';
-  });
-  xml+='</Table></Worksheet>\n';
-  xml+='</Workbook>';
-  triggerDownload(xml,'application/vnd.ms-excel;charset=utf-8;','expense_data_'+new Date().toISOString().slice(0,10)+'.xls');
+  var iData=[['Date','Amount','Source']];
+  inc.forEach(function(t){iData.push([t.d,t.a,t.t]);});
+  var wi=XLSX.utils.aoa_to_sheet(iData);
+  wi['!cols']=[{wch:12},{wch:12},{wch:30}];
+  XLSX.utils.book_append_sheet(wb,wi,'Income');
+  // Download
+  XLSX.writeFile(wb,'expense_data_'+new Date().toISOString().slice(0,10)+'.xlsx');
 }
 
 // Restore transaction data from localStorage (version-based)
