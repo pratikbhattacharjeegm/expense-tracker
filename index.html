@@ -323,29 +323,108 @@ input[type="date"]{color-scheme:dark}
 <!-- ==================== PAGE: IMPORT ==================== -->
 <div id="page-import" class="page">
   <button class="back-btn" onclick="navigate('home')"><i class="fa-solid fa-arrow-left"></i> Home</button>
+
+  <!-- Password Gate -->
   <div id="importGate">
     <div class="pw-overlay">
       <i class="fa-solid fa-lock"></i>
-      <h2>Import Transactions</h2>
+      <h2>Manage Expenses</h2>
       <p>Enter password to unlock</p>
       <input type="password" class="pw-input" id="pwInp" placeholder="Password" onkeydown="if(event.key==='Enter')chkPw()">
       <button class="pw-submit" onclick="chkPw()">Unlock</button>
       <div class="pw-error-msg" id="pwErr"></div>
     </div>
   </div>
-  <div id="importUpload" style="display:none">
-    <div class="page-header">Import Statements</div>
-    <div class="page-subheader">Upload Amex CSV or MSUFCU PDF files</div>
-    <div class="upload-zone" id="upZone">
-      <i class="fa-solid fa-cloud-arrow-up"></i>
-      <p>Tap to upload or drag &amp; drop files</p>
-      <div class="fmts">Supports: .csv, .pdf</div>
-      <input type="file" id="fileInp" multiple accept=".csv,.pdf">
+
+  <!-- Unlocked Content (hidden until password entered) -->
+  <div id="importUnlocked" style="display:none">
+    <div class="page-header">Manage Expenses</div>
+    <div class="page-subheader">Add, review, import, and export transactions</div>
+
+    <!-- 1. Add Expense Form -->
+    <div class="section-title">Add Expense</div>
+    <div class="card" style="padding:20px">
+      <div class="fc-fld"><label>Date</label><input type="date" class="fc-inp" id="maDate"></div>
+      <div class="fc-fld"><label>Payment Method</label>
+        <select class="fc-sel" id="maMethod">
+          <option value="Cash">Cash</option>
+          <option value="Chase Chec">Chase Chec</option>
+          <option value="Amex CC">Amex CC</option>
+          <option value="MSU Chec">MSU Chec</option>
+          <option value="MSU Sav">MSU Sav</option>
+        </select>
+      </div>
+      <div class="fc-fld"><label>Expense Type</label>
+        <select class="fc-sel" id="maCat">
+          <option value="Rent">Rent</option>
+          <option value="Utilities">Utilities</option>
+          <option value="Groceries">Groceries</option>
+          <option value="Home Consumables">Home Consumables</option>
+          <option value="Car/Transportation">Car/Transportation</option>
+          <option value="Leisure/ Eating out">Leisure/ Eating out</option>
+          <option value="Home Capital Exp">Home Capital Exp</option>
+          <option value="Health/ Beauty">Health/ Beauty</option>
+          <option value="Debt">Debt</option>
+          <option value="Shopping">Shopping</option>
+          <option value="Travel/Holiday">Travel/Holiday</option>
+          <option value="Savings/ Investments">Savings/ Investments</option>
+          <option value="Misc">Misc</option>
+        </select>
+      </div>
+      <div class="fc-fld"><label>Description</label><input type="text" class="fc-inp" id="maDesc" placeholder="e.g. Coffee at Starbucks"></div>
+      <div class="fc-fld"><label>Amount (USD)</label><input type="number" class="fc-inp" id="maAmt" placeholder="0.00" step="0.01" min="0"></div>
+      <button class="fc-b g" style="width:100%;margin-top:12px" onclick="manualAdd()"><i class="fa-solid fa-plus" style="margin-right:6px"></i>Add Expense</button>
+      <div id="maMsg" style="margin-top:8px;font-size:12px;height:20px;text-align:center"></div>
     </div>
-    <div class="parse-status" id="parseSt" style="display:none">
-      <span id="parseTxt">Parsing files...</span>
+
+    <!-- 2. All Transactions List -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:28px;margin-bottom:12px">
+      <div class="section-title" style="margin-bottom:0">Transactions</div>
+      <select class="fc-sel" id="maFilter" style="width:auto;padding:4px 8px;font-size:11px;background:var(--bg-card)" onchange="renderManualList()"></select>
     </div>
+    <div id="maList" class="card" style="padding:0"></div>
+
+    <!-- 3. Import from Statements -->
+    <div style="margin-top:28px">
+      <div class="section-title">Import from Statements</div>
+      <div class="page-subheader">Upload Amex CSV or MSUFCU PDF files</div>
+      <div class="upload-zone" id="upZone">
+        <i class="fa-solid fa-cloud-arrow-up"></i>
+        <p>Tap to upload or drag &amp; drop files</p>
+        <div class="fmts">Supports: .csv, .pdf</div>
+        <input type="file" id="fileInp" multiple accept=".csv,.pdf">
+      </div>
+      <div class="parse-status" id="parseSt" style="display:none">
+        <span id="parseTxt">Parsing files...</span>
+      </div>
+    </div>
+
+    <!-- 4. Export Data -->
+    <div style="margin-top:28px">
+      <div class="section-title">Export Data</div>
+      <div class="card" style="padding:20px">
+        <div class="fc-fld"><label>Range</label>
+          <select class="fc-sel" id="expRange" onchange="toggleExpCustom()">
+            <option value="all">All Time</option>
+            <option value="custom">Custom Range</option>
+          </select>
+        </div>
+        <div id="expCustom" style="display:none;margin-top:8px">
+          <div style="display:flex;gap:10px">
+            <div class="fc-fld" style="flex:1"><label>From</label><input type="date" class="fc-inp" id="expFrom"></div>
+            <div class="fc-fld" style="flex:1"><label>To</label><input type="date" class="fc-inp" id="expTo"></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:16px">
+          <button class="fc-b g" style="flex:1;padding:12px" onclick="exportCSV()"><i class="fa-solid fa-file-csv" style="margin-right:6px"></i>Export CSV</button>
+          <button class="fc-b g" style="flex:1;padding:12px;background:var(--suc)" onclick="exportXLSX()"><i class="fa-solid fa-file-excel" style="margin-right:6px"></i>Export Excel</button>
+        </div>
+      </div>
+    </div>
+
   </div>
+
+  <!-- Flashcard Review (shown during import flow) -->
   <div id="importReview" style="display:none">
     <div class="page-header">Review Transactions</div>
     <div class="page-subheader" id="rvSub"></div>
@@ -395,6 +474,45 @@ function _saveState(){
   try{localStorage.setItem('expState',js);}catch(e){}
   try{window.name=js;}catch(e){}
 }
+// ========= CENTRAL DATA MANAGEMENT =========
+// All mutations to ALL_TXN go through these functions
+function saveTxnData(){
+  _state.dataVersion=(_state.dataVersion||0)+1;
+  _saveState();
+  try{localStorage.setItem('expTxnData',JSON.stringify(ALL_TXN));}catch(e){}
+  try{localStorage.setItem('expTxnVersion',String(_state.dataVersion));}catch(e){}
+}
+function addTxn(txn){
+  ALL_TXN.push(txn);
+  ALL_TXN.sort(function(a,b){return a.d.localeCompare(b.d);});
+  saveTxnData();
+}
+function addTxnBatch(arr){
+  arr.forEach(function(t){ALL_TXN.push(t);});
+  ALL_TXN.sort(function(a,b){return a.d.localeCompare(b.d);});
+  saveTxnData();
+}
+function deleteTxn(idx){
+  if(idx>=0&&idx<ALL_TXN.length){
+    ALL_TXN.splice(idx,1);
+    saveTxnData();
+    return true;
+  }
+  return false;
+}
+// Re-render whatever page is currently active
+function refreshCurrentPage(){
+  var active=document.querySelector('.page.active');
+  if(!active)return;
+  var id=active.id;
+  if(id==='page-home')renderHome();
+  else if(id==='page-breakdown')renderBreakdown();
+  else if(id==='page-month')renderMonthDetail();
+  else if(id==='page-category')renderCategoryDetail();
+  else if(id==='page-import'){renderManualList();
+    populateExpRange();}
+}
+
 function getTargets(){ return _targets; }
 function setTargets(t){ _targets=t; _state.targets=t; _saveState(); }
 
@@ -467,7 +585,7 @@ function navigate(page, param) {
   else if(page==='breakdown'){ currentBreakdown=param; populateMonthSelect('bdRange',{allTime:true,custom:true,defaultVal:'all'}); var dk=getDataKeys();if(dk.length>0){document.getElementById('bdFrom').value=dk[0]+'-01';var lk=parseKey(dk[dk.length-1]);document.getElementById('bdTo').value=dk[dk.length-1]+'-'+new Date(lk.y,lk.m,0).getDate();}renderBreakdown(); }
   else if(page==='month'){ currentMonth=param; renderMonthDetail(); }
   else if(page==='category'){ currentCat=param; renderCategoryDetail(); }
-  else if(page==='import'){ document.getElementById('importGate').style.display='block';document.getElementById('importUpload').style.display='none';document.getElementById('importReview').style.display='none';document.getElementById('pwInp').value='';document.getElementById('pwErr').textContent=''; }
+  else if(page==='import'){ document.getElementById('importGate').style.display='block';document.getElementById('importUnlocked').style.display='none';document.getElementById('importReview').style.display='none';document.getElementById('pwInp').value='';document.getElementById('pwErr').textContent=''; }
 }
 
 // ========= HOME =========
@@ -527,15 +645,21 @@ function renderHome(){
   populateMonthSelect('homeChartRange',{ranges:true,defaultVal:'last6'});
 
   // ---- Essential / Non-Essential cards: always show current MTD ----
-  var cm=currentMonthNum(),cy=currentYear();
-  var cmKey=mkKey(cy,cm);
+  // Determine which month to show based on dropdown
+  var selVal=document.getElementById('homeMonth').value;
+  var cm,cy,cmKey,cmLabel;
+  if(!selVal||selVal==='all'){
+    cm=currentMonthNum();cy=currentYear();cmKey=mkKey(cy,cm);cmLabel=MONTH_NAMES[cm-1];
+  } else {
+    var pk=parseKey(selVal);cm=pk.m;cy=pk.y;cmKey=selVal;cmLabel=keyLabel(selVal);
+  }
   var cmTxn=ALL_TXN.filter(function(t){return txnMonthKey(t.d)===cmKey;});
   var essMTD=0,nonMTD=0;
   cmTxn.forEach(function(t){if(isEss(t.c))essMTD+=t.a;else nonMTD+=t.a;});
   document.getElementById('essTotal').textContent=fmt(essMTD);
   document.getElementById('nonEssTotal').textContent=fmt(nonMTD);
 
-  // 3-month average (last 3 full months before current)
+  // 3-month average (3 months before selected month)
   var allKeys=getDataKeys();
   var ckIdx=allKeys.indexOf(cmKey);
   var avgKeys=[];
@@ -550,8 +674,8 @@ function renderHome(){
     essAvgT=essAvgT/avgKeys.length;
     nonAvgT=nonAvgT/avgKeys.length;
   }
-  document.getElementById('essSub').textContent=MONTH_NAMES[cm-1]+' to date';
-  document.getElementById('nonEssSub').textContent=MONTH_NAMES[cm-1]+' to date';
+  document.getElementById('essSub').textContent=cmLabel+(!selVal||selVal==='all'?' to date':'');
+  document.getElementById('nonEssSub').textContent=cmLabel+(!selVal||selVal==='all'?' to date':'');
   document.getElementById('essAvg').textContent=avgKeys.length>0?'3-mo avg: '+fmt(Math.round(essAvgT)):'';
   document.getElementById('nonEssAvg').textContent=avgKeys.length>0?'3-mo avg: '+fmt(Math.round(nonAvgT)):'';
 
@@ -579,19 +703,13 @@ function renderHome(){
     else{tgtH='<span style="color:var(--text-mut)">No target</span>';}
     var c=document.createElement('div');c.className='cat-qcard';
     c.onclick=(function(ct){return function(){navigate('category',ct);};})(cat);
-    c.innerHTML='<div class="cq-icon">'+(qcIcons[cat]||'\U0001F4CA')+'</div><div class="cq-name">'+cat+'</div><div class="cq-val">'+fmt(mtd)+'</div><div class="cq-sub">'+MONTH_NAMES[cm-1]+' to date'+(avgKeys.length>0?' \u00b7 3-mo avg: '+fmt(Math.round(catAvg)):'')+'</div><div class="cq-sub" style="margin-top:2px">'+tgtH+'</div>';
+    c.innerHTML='<div class="cq-icon">'+(qcIcons[cat]||'📊')+'</div><div class="cq-name">'+cat+'</div><div class="cq-val">'+fmt(mtd)+'</div><div class="cq-sub">'+cmLabel+(!selVal||selVal==='all'?' to date':'')+' \u00b7 '+(avgKeys.length>0?'3-mo avg: '+fmt(Math.round(catAvg)):'')+'</div><div class="cq-sub" style="margin-top:2px">'+tgtH+'</div>';
     grid.appendChild(c);
   });
 
-  // ---- Subtitle from dropdown ----
-  var selVal=document.getElementById('homeMonth').value;
-  var filt;
-  if(!selVal||selVal==='all'){
-    filt=ALL_TXN; var rangeLabel='All Time';
-  } else {
-    filt=ALL_TXN.filter(function(t){return txnMonthKey(t.d)===selVal;});
-    var rangeLabel=keyLabel(selVal);
-  }
+  // ---- Subtitle ----
+  var filt=(!selVal||selVal==='all')?ALL_TXN:cmTxn;
+  var rangeLabel=(!selVal||selVal==='all')?'All Time':cmLabel;
   var essTotal=0,nonEssTotal=0;
   filt.forEach(function(t){if(isEss(t.c))essTotal+=t.a;else nonEssTotal+=t.a;});
   document.getElementById('homeSubtitle').textContent=rangeLabel+' \u00b7 '+filt.length+' transactions \u00b7 '+fmt(essTotal+nonEssTotal)+' total';
@@ -915,8 +1033,10 @@ function chkPw(){
   var v=document.getElementById('pwInp').value;
   if(v==='Kitty@2023'){
     document.getElementById('importGate').style.display='none';
-    document.getElementById('importUpload').style.display='block';
+    document.getElementById('importUnlocked').style.display='block';
+    document.getElementById('maDate').valueAsDate=new Date();
     initUpZone();
+    renderManualList();
   }else{
     document.getElementById('pwErr').textContent='Wrong password';
     var inp=document.getElementById('pwInp');inp.classList.add('pw-err');
@@ -961,19 +1081,27 @@ function parseCSVFile(file){
   return new Promise(function(res){
     var rdr=new FileReader();
     rdr.onload=function(e){
-      var lines=e.target.result.split('\n'),rows=[],hdr=-1;
-      for(var i=0;i<Math.min(lines.length,10);i++){if(/date/i.test(lines[i])&&/amount/i.test(lines[i])){hdr=i;break;}}
-      if(hdr===-1)hdr=0;
-      var hs=lines[hdr].split(',').map(function(h){return h.trim().replace(/"/g,'').toLowerCase();});
-      var di=hs.findIndex(function(h){return/date/.test(h);}),
-          xi=hs.findIndex(function(h){return/description|merchant|memo/.test(h);}),
-          ai=hs.findIndex(function(h){return/^amount$/.test(h);});
-      if(di===-1||ai===-1){res([]);return;}
+      var txt=e.target.result;
+      var rows=[],lines=csvSplit(txt),hdr=-1;
+      // Find header row (contains "Date" and "Amount")
+      for(var i=0;i<Math.min(lines.length,15);i++){
+        var low=lines[i].map(function(c){return c.toLowerCase();});
+        if(low.indexOf('date')>=0&&low.indexOf('amount')>=0){hdr=i;break;}
+      }
+      if(hdr===-1){console.warn('CSV: no header found');res([]);return;}
+      var hs=lines[hdr].map(function(h){return h.toLowerCase().trim();});
+      var di=-1,xi=-1,ai=-1;
+      for(var j=0;j<hs.length;j++){
+        if(di===-1&&/^date$/.test(hs[j]))di=j;
+        if(xi===-1&&/^description$|^merchant|^memo/.test(hs[j]))xi=j;
+        if(ai===-1&&/^amount$/.test(hs[j]))ai=j;
+      }
+      if(di===-1||ai===-1){console.warn('CSV: missing Date/Amount cols');res([]);return;}
       for(var i=hdr+1;i<lines.length;i++){
-        var cols=lines[i].split(',').map(function(c){return c.trim().replace(/"/g,'');});
-        if(cols.length<=ai)continue;
+        var cols=lines[i];
+        if(cols.length<=Math.max(di,ai))continue;
         var amt=parseFloat(cols[ai]);
-        if(isNaN(amt)||amt<=0)continue;
+        if(isNaN(amt)||amt<=0)continue; // charges only (positive)
         var desc=xi>=0?cols[xi]:'Unknown',dp=new Date(cols[di]);
         if(isNaN(dp.getTime()))continue;
         var ds=dp.getFullYear()+'-'+String(dp.getMonth()+1).padStart(2,'0')+'-'+String(dp.getDate()).padStart(2,'0');
@@ -981,38 +1109,96 @@ function parseCSVFile(file){
         var shortD=desc.length>50?desc.substring(0,50)+'...':desc;
         rows.push({d:ds,desc:shortD,a:amt,raw:desc,m:'Amex CC',cat:cat});
       }
+      console.log('CSV parsed: '+rows.length+' charges');
       res(rows);
     };
     rdr.readAsText(file);
   });
 }
 
-// PDF parser (MSUFCU format)
+// Proper CSV line parser (handles quoted fields with commas/newlines)
+function csvSplit(txt){
+  var result=[],row=[],field='',inQ=false;
+  for(var i=0;i<txt.length;i++){
+    var c=txt[i];
+    if(inQ){
+      if(c==='"'){
+        if(i+1<txt.length&&txt[i+1]==='"'){field+='"';i++;} // escaped quote
+        else inQ=false;
+      }else field+=c;
+    }else{
+      if(c==='"')inQ=true;
+      else if(c===','){row.push(field);field='';}
+      else if(c==='\n'||c==='\r'){
+        if(c==='\r'&&i+1<txt.length&&txt[i+1]==='\n')i++;
+        row.push(field);field='';
+        if(row.length>1||row[0]!=='')result.push(row);
+        row=[];
+      }else field+=c;
+    }
+  }
+  row.push(field);
+  if(row.length>1||row[0]!=='')result.push(row);
+  return result;
+}
+
+// PDF parser (MSUFCU statement format)
 async function parsePDFFile(file){
-  if(typeof pdfjsLib==='undefined')throw new Error('PDF.js not loaded');
+  if(typeof pdfjsLib==='undefined'){alert('PDF.js not loaded — check internet connection');return[];}
   pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
   var ab=await file.arrayBuffer();
   var pdf=await pdfjsLib.getDocument({data:ab}).promise;
-  var txt='';
+  // Extract text with line breaks based on y-coordinate changes
+  var allLines=[];
   for(var p=1;p<=pdf.numPages;p++){
     var pg=await pdf.getPage(p),tc=await pg.getTextContent();
-    txt+=tc.items.map(function(i){return i.str;}).join(' ')+'\n';
-  }
-  // Detect year from statement
-  var ym=txt.match(/statement\s+period.*?(20\d{2})/i)||txt.match(/(20\d{2})/);
-  var yr=ym?ym[1]:'2026';
-  // Parse transactions: look for date amount balance type description patterns
-  var rows=[],rx=/(\d{2})-(\d{2})\s+([\d,]+\.\d{2})\s+[\d,]+\.\d{2}\s+(Withdrawal|Deposit)\s+(.+?)(?=\d{2}-\d{2}\s|$)/g,m;
-  while((m=rx.exec(txt))!==null){
-    var mo=m[1],dy=m[2],amt=parseFloat(m[3].replace(/,/g,'')),tp=m[4],desc=m[5].trim();
-    var ds=yr+'-'+mo+'-'+dy,cat=autoCat(desc);
-    if(tp==='Deposit'){
-      if(cat==='__INCOME__'||cat==='__SKIP__'){rows.push({d:ds,desc:desc.substring(0,50),a:amt,raw:desc,m:'MSU Chec',cat:cat});continue;}
+    var items=tc.items,curY=null,curLine='';
+    for(var j=0;j<items.length;j++){
+      var it=items[j],y=it.transform?it.transform[5]:null;
+      if(curY!==null&&y!==null&&Math.abs(y-curY)>2){
+        if(curLine.trim())allLines.push(curLine.trim());
+        curLine='';
+      }
+      curLine+=(curLine?' ':'')+it.str;
+      if(y!==null)curY=y;
     }
-    if(tp==='Withdrawal'){
-      rows.push({d:ds,desc:desc.substring(0,50),a:amt,raw:desc,m:'MSU Chec',cat:cat});
+    if(curLine.trim())allLines.push(curLine.trim());
+  }
+  console.log('PDF lines extracted: '+allLines.length);
+  // Detect year from statement period
+  var fullTxt=allLines.join(' ');
+  var ym=fullTxt.match(/(\d{2})-\d{2}-(20\d{2})\s*-/)||fullTxt.match(/(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d+\s+(20\d{2})\s+to/i)||fullTxt.match(/(20\d{2})/);
+  var yr=ym?(ym[2]||ym[1]):'2026';
+  console.log('Detected year: '+yr);
+
+  var datePat=/^(\d{2})-(\d{2})$/;
+  var txnPat=/^(-?[\d,]+\.\d{2})\s+([\d,]+\.\d{2})\s+(Withdrawal|Deposit)\s+(.*)$/;
+  var skipPat=/Balance Forward|Ending Balance|Dividend|Annual Percentage/i;
+  var curDate=null,rows=[];
+
+  for(var i=0;i<allLines.length;i++){
+    var line=allLines[i];
+    var dm=datePat.exec(line);
+    if(dm){curDate=dm[1]+'-'+dm[2];continue;}
+    var tm=txnPat.exec(line);
+    if(tm&&curDate){
+      var amt=Math.abs(parseFloat(tm[1].replace(/,/g,'')));
+      var tp=tm[3],desc=tm[4].trim();
+      if(skipPat.test(desc))continue;
+      var ds=yr+'-'+curDate;
+      var cat=autoCat(desc);
+      // Collect continuation lines (non-date, non-transaction lines)
+      var fullDesc=desc;
+      for(var j=i+1;j<allLines.length;j++){
+        var nxt=allLines[j];
+        if(!nxt||datePat.test(nxt)||txnPat.test(nxt)||/^-?[\d,]+\.\d{2}\s/.test(nxt)||skipPat.test(nxt))break;
+        fullDesc+=' '+nxt;
+        i=j;
+      }
+      rows.push({d:ds,desc:fullDesc.substring(0,50),a:amt,raw:fullDesc,m:'MSU Chec',cat:cat,_type:tp});
     }
   }
+  console.log('PDF parsed: '+rows.length+' transactions');
   return rows;
 }
 
@@ -1020,29 +1206,56 @@ async function parsePDFFile(file){
 async function handleImpFiles(files){
   var st=document.getElementById('parseSt'),stx=document.getElementById('parseTxt');
   st.style.display='block';impParsed=[];
+  var errCount=0;
   for(var i=0;i<files.length;i++){
     var f=files[i],nm=f.name.toLowerCase();
     stx.textContent='Parsing: '+f.name+'...';
     try{
-      if(nm.endsWith('.csv')){var r=await parseCSVFile(f);impParsed=impParsed.concat(r);}
-      else if(nm.endsWith('.pdf')){var r=await parsePDFFile(f);impParsed=impParsed.concat(r);}
-      else{stx.innerHTML='<span style="color:var(--warn)">Unsupported: '+f.name+'. Use CSV or PDF.</span>';continue;}
-    }catch(err){stx.innerHTML='<span style="color:var(--err)">Error: '+err.message+'</span>';}
+      var r=[];
+      if(nm.endsWith('.csv')){r=await parseCSVFile(f);}
+      else if(nm.endsWith('.pdf')){r=await parsePDFFile(f);}
+      else{stx.innerHTML='<span style="color:var(--warn)">Unsupported: '+esc(f.name)+'. Use .csv or .pdf</span>';continue;}
+      impParsed=impParsed.concat(r);
+    }catch(err){
+      console.error('Parse error:',err);
+      stx.innerHTML='<span style="color:var(--err)">Error parsing '+esc(f.name)+': '+esc(err.message)+'</span>';
+      errCount++;
+    }
   }
-  var spend=impParsed.filter(function(r){return r.cat!=='__SKIP__'&&r.cat!=='__INCOME__';});
-  var inc=impParsed.filter(function(r){return r.cat==='__INCOME__';});
+  if(errCount>0&&impParsed.length===0)return;
+  // Filter: skip internal transfers between MSUFCU accounts
+  var internals=/ComputerLine Transfer|Transfer (To|From) Share/i;
+  var incPat=/AMAZON DATA SERV.*PAYROLL|Faster Payments RTP|ACH AMAZON.*EDI/i;
+  var amexPay=/AMEX EPAYMENT/i;
+  var filtered=[],incCount=0,skipCount=0;
+  impParsed.forEach(function(t){
+    if(internals.test(t.raw)){skipCount++;return;} // internal transfer
+    if(amexPay.test(t.raw)){skipCount++;return;} // Amex payment (avoid double count)
+    if(incPat.test(t.raw)){t.cat='__INCOME__';incCount++;filtered.push(t);return;}
+    if(t._type==='Deposit'&&!incPat.test(t.raw)){
+      // Other deposits — might be refunds or misc income, include for review
+      t.cat='__INCOME__';incCount++;filtered.push(t);return;
+    }
+    filtered.push(t);
+  });
+  var spend=filtered.filter(function(r){return r.cat!=='__SKIP__'&&r.cat!=='__INCOME__';});
+  var inc=filtered.filter(function(r){return r.cat==='__INCOME__';});
   impParsed=spend;
   if(impParsed.length>0){
-    stx.innerHTML='Found <span class="cnt">'+impParsed.length+'</span> spending transactions'+(inc.length>0?' (+'+inc.length+' income)':'');
+    stx.innerHTML='Found <span class="cnt">'+impParsed.length+'</span> spending transactions'+(inc.length>0?' <span style="color:var(--text-mut)">(+'+inc.length+' income, '+skipCount+' internal transfers skipped)</span>':'');
     setTimeout(function(){startFC();},800);
-  }else{stx.innerHTML='<span style="color:var(--warn)">No transactions found.</span>';}
+  }else if(inc.length>0){
+    stx.innerHTML='<span style="color:var(--warn)">Found '+inc.length+' income entries but no new spending. Upload an Amex CSV for spending data.</span>';
+  }else{
+    stx.innerHTML='<span style="color:var(--warn)">No transactions found. Check the file format.</span>';
+  }
 }
 
 // ========= FLASHCARD REVIEW =========
 var CATS=['Rent','Utilities','Groceries','Home Consumables','Car/Transportation','Leisure/ Eating out','Home Capital Exp','Health/ Beauty','Debt','Shopping','Travel/Holiday','Savings/ Investments','Misc'];
 
 function startFC(){
-  document.getElementById('importUpload').style.display='none';
+  document.getElementById('importUnlocked').style.display='none';
   document.getElementById('importReview').style.display='block';
   impIdx=0;impOK=[];
   document.getElementById('rvSub').textContent=impParsed.length+' transactions to review';
@@ -1100,9 +1313,7 @@ function showFCSummary(){
 }
 
 function lockImp(){
-  impOK.forEach(function(t){ALL_TXN.push(t);});
-  ALL_TXN.sort(function(a,b){return a.d.localeCompare(b.d);});
-  try{localStorage.setItem('expTxnData',JSON.stringify(ALL_TXN));}catch(e){}
+  addTxnBatch(impOK);
   var box=document.getElementById('fcBox');
   box.innerHTML='<div class="fc-sum">'+
     '<i class="fa-solid fa-check-circle" style="font-size:48px;color:var(--suc);margin-bottom:12px"></i>'+
@@ -1113,11 +1324,227 @@ function lockImp(){
   impParsed=[];impIdx=0;impOK=[];
 }
 
+// ========= MANUAL ADD =========
+function manualAdd(){
+  var dt=document.getElementById('maDate').value;
+  var meth=document.getElementById('maMethod').value;
+  var cat=document.getElementById('maCat').value;
+  var desc=document.getElementById('maDesc').value.trim();
+  var amt=parseFloat(document.getElementById('maAmt').value);
+  var msg=document.getElementById('maMsg');
+  if(!dt){msg.innerHTML='<span style="color:var(--err)">Please select a date</span>';return;}
+  if(!desc){msg.innerHTML='<span style="color:var(--err)">Please enter a description</span>';return;}
+  if(isNaN(amt)||amt<=0){msg.innerHTML='<span style="color:var(--err)">Please enter a valid amount</span>';return;}
+  var txn={d:dt,m:meth,c:cat,desc:desc,a:amt};
+  addTxn(txn);
+  msg.innerHTML='<span style="color:var(--suc)">✓ Added '+esc(desc)+' — '+fmt2(amt)+'</span>';
+  // Reset form
+  document.getElementById('maDesc').value='';
+  document.getElementById('maAmt').value='';
+  renderManualList();
+  setTimeout(function(){msg.innerHTML='';},3000);
+}
+
+
+// ========= DELETE CONFIRMATION =========
+var _pendingDelIdx=-1;
+function askDel(idx){
+  if(idx<0||idx>=ALL_TXN.length)return;
+  _pendingDelIdx=idx;
+  var t=ALL_TXN[idx];
+  document.getElementById('delDesc').innerHTML='<b>'+esc(t.desc)+'</b><br>'+t.d+' &middot; '+fmt2(t.a)+' &middot; '+esc(t.m);
+  var m=document.getElementById('delModal');
+  m.style.display='flex';
+}
+function cancelDel(){
+  _pendingDelIdx=-1;
+  document.getElementById('delModal').style.display='none';
+}
+function confirmDel(){
+  if(_pendingDelIdx>=0){
+    deleteTxn(_pendingDelIdx);
+    _pendingDelIdx=-1;
+    document.getElementById('delModal').style.display='none';
+    renderManualList();
+    // Also refresh home if we navigate back
+  }
+}
+
+function renderManualList(){
+  var sel=document.getElementById('maFilter');
+  var keys=getDataKeys();
+  // Populate filter dropdown (keep selection if possible)
+  var prevVal=sel.value;
+  if(sel.options.length!==keys.length+1){
+    sel.innerHTML='<option value="all">All Time</option>';
+    keys.slice().reverse().forEach(function(k){
+      sel.innerHTML+='<option value="'+k+'">'+keyLabel(k)+'</option>';
+    });
+    if(prevVal)sel.value=prevVal;
+  }
+  // Default to current month if nothing selected
+  if(!sel.value||sel.value==='')sel.value=keys.length>0?keys[keys.length-1]:'all';
+  var fk=sel.value;
+  // Get ALL transactions for selected period (not just manual adds)
+  var txns=[];
+  for(var i=0;i<ALL_TXN.length;i++){
+    var t=ALL_TXN[i];
+    if(fk==='all'||txnMonthKey(t.d)===fk){txns.push({idx:i,t:t});}
+  }
+  txns.reverse(); // newest first
+  var el=document.getElementById('maList');
+  if(txns.length===0){el.innerHTML='<div style="padding:20px;text-align:center;color:var(--text-mut);font-size:13px">No transactions for this period</div>';return;}
+  // Summary
+  var total=txns.reduce(function(s,r){return s+r.t.a;},0);
+  var h='<div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;color:var(--text-sec)">'+txns.length+' transactions</span><span style="font-size:14px;font-weight:700;font-family:var(--mono)">'+fmt2(total)+'</span></div>';
+  h+='<ul class="txn-list" style="padding:0 16px">';
+  txns.forEach(function(r){
+    var t=r.t;
+    h+='<li class="txn-item"><div class="txn-left"><div class="txn-desc">'+esc(t.desc)+'</div><div class="txn-date">'+t.d+'<span class="txn-method">'+esc(t.m)+'</span><span class="badge '+(isEss(t.c)?'badge-ess':'badge-non')+'" style="margin-left:4px">'+esc(t.c)+'</span></div></div><div style="display:flex;align-items:center;gap:12px"><div class="txn-amount">'+fmt2(t.a)+'</div><button onclick="askDel('+r.idx+')" style="background:none;border:none;color:var(--text-mut);cursor:pointer;padding:4px;font-size:14px;transition:color .15s" onmouseover="this.style.color=\'var(--err)\'" onmouseout="this.style.color=\'var(--text-mut)\'"><i class="fa-solid fa-trash-can"></i></button></div></li>';
+  });
+  h+='</ul>';
+  el.innerHTML=h;
+}
+
 // Restore from localStorage if newer
-try{var sv=localStorage.getItem('expTxnData');if(sv){var p=JSON.parse(sv);if(p.length>ALL_TXN.length){ALL_TXN.length=0;p.forEach(function(t){ALL_TXN.push(t);});}}}catch(e){}
+
+// ========= EXPORT DATA =========
+
+function populateExpRange(){
+  var sel=document.getElementById('expRange');
+  if(!sel)return;
+  var keys=getDataKeys();
+  sel.innerHTML='<option value="all">All Time</option>';
+  keys.slice().reverse().forEach(function(k){
+    sel.innerHTML+='<option value="'+k+'">'+keyLabel(k)+'</option>';
+  });
+  sel.innerHTML+='<option value="custom">Custom Range</option>';
+}
+
+function toggleExpCustom(){
+  var v=document.getElementById('expRange').value;
+  document.getElementById('expCustom').style.display=v==='custom'?'block':'none';
+  // If a specific month is selected, auto-set from/to for that month
+  if(v!=='all'&&v!=='custom'&&v.match(/^\d{4}-\d{2}$/)){
+    var pk=parseKey(v);
+    document.getElementById('expFrom').value=v+'-01';
+    document.getElementById('expTo').value=v+'-'+new Date(pk.y,pk.m,0).getDate();
+  }
+  if(v==='custom'){
+    var keys=getDataKeys();
+    if(keys.length>0){
+      document.getElementById('expFrom').value=keys[0]+'-01';
+      var lk=parseKey(keys[keys.length-1]);
+      document.getElementById('expTo').value=keys[keys.length-1]+'-'+new Date(lk.y,lk.m,0).getDate();
+    }
+  }
+}
+function getExpTxns(){
+  var rng=document.getElementById('expRange').value;
+  if(rng==='all')return ALL_TXN;
+  if(rng!=='custom'&&rng.match(/^\d{4}-\d{2}$/)){
+    return ALL_TXN.filter(function(t){return txnMonthKey(t.d)===rng;});
+  }
+  var from=document.getElementById('expFrom').value;
+  var to=document.getElementById('expTo').value;
+  if(!from||!to)return ALL_TXN;
+  return ALL_TXN.filter(function(t){return t.d>=from&&t.d<=to;});
+}
+function getExpIncome(){
+  var rng=document.getElementById('expRange').value;
+  if(rng==='all')return INCOME;
+  if(rng!=='custom'&&rng.match(/^\d{4}-\d{2}$/)){
+    return INCOME.filter(function(t){return txnMonthKey(t.d)===rng;});
+  }
+  var from=document.getElementById('expFrom').value;
+  var to=document.getElementById('expTo').value;
+  if(!from||!to)return INCOME;
+  return INCOME.filter(function(t){return t.d>=from&&t.d<=to;});
+}
+
+// Download helper — works in iframes and normal pages
+function triggerDownload(dataStr, mimeType, filename){
+  var blob=new Blob([dataStr],{type:mimeType});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;a.download=filename;
+  // Try top-level window if in iframe
+  try{
+    if(window.top!==window.self){
+      var ta=window.top.document.createElement('a');
+      ta.href=url;ta.download=filename;
+      window.top.document.body.appendChild(ta);ta.click();
+      window.top.document.body.removeChild(ta);
+      setTimeout(function(){URL.revokeObjectURL(url);},2000);
+      return;
+    }
+  }catch(e){}
+  // Normal download
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  setTimeout(function(){URL.revokeObjectURL(url);},2000);
+}
+
+function exportCSV(){
+  var txns=getExpTxns();
+  var hdr='Date,Method,Category,Description,Amount\n';
+  var rows=txns.map(function(t){
+    return '"'+t.d+'","'+t.m+'","'+t.c+'","'+(t.desc||'').replace(/"/g,'""')+'",'+t.a.toFixed(2);
+  }).join('\n');
+  var csv=hdr+rows;
+  triggerDownload(csv,'text/csv;charset=utf-8;','expense_data_'+new Date().toISOString().slice(0,10)+'.csv');
+}
+
+function exportXLSX(){
+  var xml='<?xml version="1.0"?>\n<?mso-application progid="Excel.Sheet"?>\n';
+  xml+='<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"\n';
+  xml+=' xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">\n';
+  xml+='<Worksheet ss:Name="Spending"><Table>\n';
+  xml+='<Row><Cell><Data ss:Type="String">Date</Data></Cell><Cell><Data ss:Type="String">Method</Data></Cell><Cell><Data ss:Type="String">Category</Data></Cell><Cell><Data ss:Type="String">Description</Data></Cell><Cell><Data ss:Type="String">Amount</Data></Cell></Row>\n';
+  var txns=getExpTxns();
+  txns.forEach(function(t){
+    xml+='<Row><Cell><Data ss:Type="String">'+esc(t.d)+'</Data></Cell><Cell><Data ss:Type="String">'+esc(t.m)+'</Data></Cell><Cell><Data ss:Type="String">'+esc(t.c)+'</Data></Cell><Cell><Data ss:Type="String">'+esc(t.desc||'')+'</Data></Cell><Cell><Data ss:Type="Number">'+t.a.toFixed(2)+'</Data></Cell></Row>\n';
+  });
+  xml+='</Table></Worksheet>\n';
+  xml+='<Worksheet ss:Name="Income"><Table>\n';
+  xml+='<Row><Cell><Data ss:Type="String">Date</Data></Cell><Cell><Data ss:Type="String">Amount</Data></Cell><Cell><Data ss:Type="String">Source</Data></Cell></Row>\n';
+  var inc=getExpIncome();
+  inc.forEach(function(t){
+    xml+='<Row><Cell><Data ss:Type="String">'+esc(t.d)+'</Data></Cell><Cell><Data ss:Type="Number">'+t.a.toFixed(2)+'</Data></Cell><Cell><Data ss:Type="String">'+esc(t.t)+'</Data></Cell></Row>\n';
+  });
+  xml+='</Table></Worksheet>\n';
+  xml+='</Workbook>';
+  triggerDownload(xml,'application/vnd.ms-excel;charset=utf-8;','expense_data_'+new Date().toISOString().slice(0,10)+'.xls');
+}
+
+// Restore transaction data from localStorage (version-based)
+try{
+  var sv=localStorage.getItem('expTxnData'),ver=parseInt(localStorage.getItem('expTxnVersion'))||0;
+  if(sv&&ver>0){
+    var p=JSON.parse(sv);
+    if(Array.isArray(p)){
+      ALL_TXN.length=0;
+      p.forEach(function(t){ALL_TXN.push(t);});
+      _state.dataVersion=ver;
+    }
+  }
+}catch(e){console.warn('Restore failed:',e);}
 
 // Initial render
 renderHome();
 </script>
+
+<!-- Delete Confirmation Modal -->
+<div id="delModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.6);align-items:center;justify-content:center">
+  <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);padding:24px;max-width:360px;width:90%;text-align:center">
+    <i class="fa-solid fa-triangle-exclamation" style="font-size:32px;color:var(--warn);margin-bottom:12px"></i>
+    <div style="font-size:15px;font-weight:600;margin-bottom:6px">Delete Transaction?</div>
+    <div id="delDesc" style="font-size:13px;color:var(--text-sec);margin-bottom:16px"></div>
+    <div style="display:flex;gap:10px;justify-content:center">
+      <button onclick="cancelDel()" style="flex:1;padding:10px;border-radius:var(--rs);border:1px solid var(--border);background:var(--bg);color:var(--text-sec);font-size:13px;font-weight:500;cursor:pointer;font-family:var(--font)">Cancel</button>
+      <button onclick="confirmDel()" style="flex:1;padding:10px;border-radius:var(--rs);border:none;background:var(--err);color:white;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font)">Delete</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
